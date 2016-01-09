@@ -8,9 +8,8 @@ class Noncopyable {
 public:
     Noncopyable() {}
 
-private:
-    Noncopyable(Noncopyable const&);
-    void operator=(Noncopyable const&);
+    Noncopyable(Noncopyable const&) = delete;
+    Noncopyable& operator=(Noncopyable const&) = delete;
 };
 
 } // namespace utils

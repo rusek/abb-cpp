@@ -4,7 +4,7 @@
 namespace abb {
 namespace ll {
 
-template<typename DoneCont>
+template<typename Result>
 class Successor {
 public:
 };
@@ -14,7 +14,7 @@ class Successor<void(Args...)> {
 public:
     virtual ~Successor() {}
 
-    virtual void done(Args...) = 0;
+    virtual void onsuccess(Args...) = 0;
 };
 
 } // namespace ll

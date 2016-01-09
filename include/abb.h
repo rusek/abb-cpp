@@ -9,7 +9,16 @@ namespace abb {
 
 template<typename... Args>
 Block<void(Args...)> success(Args... args) {
-    return std::unique_ptr<ll::Brick<void(Args...)>>(ll::SuccessBrick<void(Args...)>::newWithResult(args...));
+    typedef ll::SuccessBrick<void(Args...)> BrickType;
+
+    BrickType * brick = new BrickType;
+    try {
+        brick->setResult(args...);
+    } catch(...) {
+        delete brick;
+        throw;
+    }
+    return Block<void(Args...)>(std::unique_ptr<typename BrickType::BaseType>(brick));
 }
 
 } // namespace abb

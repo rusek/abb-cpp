@@ -8,13 +8,16 @@
 namespace abb {
 namespace ll {
 
-template<typename DoneCont>
+template<typename Result>
 class Brick {};
 
 template<typename... Args>
 class Brick<void(Args...)> : utils::Noncopyable {
 public:
-    virtual void setSuccessor(Successor<void(Args...)> & successor) = 0;
+    typedef Brick<void(Args...)> BaseType;
+    typedef Successor<void(Args...)> SuccessorType;
+
+    virtual void setSuccessor(SuccessorType & successor) = 0;
 
     virtual ~Brick() {}
 };

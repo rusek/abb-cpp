@@ -11,8 +11,6 @@ IntBlock increment(int val) {
 
 void doSth() {
     IntBlock myBlock = abb::success(12).pipe<IntBlock>(&increment).pipe<IntBlock>(&increment);
-
-    myBlock.detach();
 }
 
 int main() {
