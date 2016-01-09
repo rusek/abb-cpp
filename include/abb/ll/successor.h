@@ -1,7 +1,8 @@
-#ifndef ABB_SUCCESSOR_H
-#define ABB_SUCCESSOR_H
+#ifndef ABB_LL_SUCCESSOR_H
+#define ABB_LL_SUCCESSOR_H
 
 namespace abb {
+namespace ll {
 
 template<typename DoneCont>
 class Successor {
@@ -16,6 +17,7 @@ public:
     virtual void done(Args...) = 0;
 };
 
+} // namespace ll
 } // namespace abb
 
 #endif // ABB_SUCCESSOR_H
