@@ -1,6 +1,12 @@
 #ifndef ABB_H
 #define ABB_H
 
+#include <abb/utils/call.h>
+#include <abb/utils/debug.h>
+#include <abb/utils/noncopyable.h>
+#include <abb/island.h>
+#include <abb/successor.h>
+
 #include <tuple>
 #include <deque>
 #include <functional>
@@ -10,113 +16,13 @@
 #include <memory>
 #include <type_traits>
 
-#define ABB_FIASCO(msg) \
-    do { \
-        std::cerr << "File " << __FILE__ << ", line " << __LINE__ << ": " << msg << std::endl; \
-        std::abort(); \
-    } while (0)
-
-#define ABB_ASSERT(cond, msg) \
-    do { \
-        if (!(cond)) { \
-            ABB_FIASCO(msg); \
-        } \
-    } while (0)
-
 namespace abb {
-
-namespace detail
-{
-    template <typename F, typename Tuple, bool Done, int Total, int... N>
-    struct call_impl
-    {
-        static void call(F f, Tuple t)
-        {
-            call_impl<F, Tuple, Total == 1 + sizeof...(N), Total, N..., sizeof...(N)>::call(f, t);
-        }
-    };
-
-    template <typename F, typename Tuple, int Total, int... N>
-    struct call_impl<F, Tuple, true, Total, N...>
-    {
-        static void call(F f, Tuple t)
-        {
-            f(std::get<N>(t)...);
-        }
-    };
-}
-
-// user invokes this
-template <typename F, typename Tuple>
-void call(F f, Tuple t)
-{
-    typedef typename std::decay<Tuple>::type ttype;
-    detail::call_impl<F, Tuple, 0 == std::tuple_size<ttype>::value, std::tuple_size<ttype>::value>::call(f, Tuple(t));
-}
-
-class Noncopyable {
-public:
-    Noncopyable() {}
-private:
-    Noncopyable(Noncopyable const&);
-    void operator=(Noncopyable const&);
-};
-
-class Island {
-public:
-    typedef std::function<void()> Task;
-
-    void enqueue(Task task) {
-        this->tasks.push_back(task);
-    }
-
-    void run() {
-        ABB_ASSERT(Island::currentPtr == nullptr, "Current island already set");
-        Island::currentPtr = this;
-
-        while (!this->tasks.empty()) {
-            Task task = this->tasks.front();
-            this->tasks.pop_front();
-            task();
-        }
-
-        ABB_ASSERT(Island::currentPtr == this, "Current island changed in the meantime");
-        Island::currentPtr = nullptr;
-    }
-
-    static Island & current() {
-        ABB_ASSERT(Island::currentPtr != nullptr, "Current island not set");
-        return *Island::currentPtr;
-    }
-
-private:
-    std::deque<Task> tasks;
-
-    static Island * currentPtr;
-};
-
-Island * Island::currentPtr = nullptr;
-
-
-template<typename DoneCont>
-class Successor {
-public:
-};
-
-template<typename... Args>
-class Successor<void(Args...)> {
-public:
-    virtual ~Successor() {}
-
-    virtual void done(Args...) = 0;
-};
-
 
 template<typename DoneCont>
 class BlockImpl {};
 
 template<typename... Args>
-class BlockImpl<void(Args...)> : Noncopyable {
+class BlockImpl<void(Args...)> : utils::Noncopyable {
 public:
     virtual void setSuccessor(Successor<void(Args...)> & successor) = 0;
 
@@ -172,7 +78,7 @@ private:
 
         std::unique_ptr<std::tuple<Args...>> argsTuple(std::move(this->argsTuple));
         this->notified = true;
-        call(DoneCaller(this->successor), *argsTuple);
+        utils::call(DoneCaller(this->successor), *argsTuple);
     }
 
     void tryFinish() {
@@ -303,13 +209,6 @@ public:
 
 private:
     std::unique_ptr<ImplType> impl;
-};
-
-
-
-template<typename Done>
-class Cont {
-
 };
 
 template<typename... Args>
