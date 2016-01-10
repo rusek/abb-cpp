@@ -14,14 +14,14 @@
 namespace abb {
 namespace ll {
 
-template<typename Result>
-class SuccessBrick {};
+template<typename Result, typename Reason>
+class SuccessBrick {}; // TODO rename to ValueBrick
 
 template<typename... Args>
-class SuccessBrick<void(Args...)> : public Brick<void(Args...)> {
+class SuccessBrick<void(Args...), Und> : public Brick<void(Args...), Und> {
 public:
-    typedef Brick<void(Args...)> BaseType;
-    typedef Successor<void(Args...)> SuccessorType;
+    typedef Brick<void(Args...), Und> BaseType;
+    typedef Successor<void(Args...), Und> SuccessorType;
 
     SuccessBrick();
 
@@ -41,15 +41,15 @@ private:
 
 
 template<typename... Args>
-SuccessBrick<void(Args...)>::SuccessBrick(): argsTuple(), successor(nullptr), completed(false) {}
+SuccessBrick<void(Args...), Und>::SuccessBrick(): argsTuple(), successor(nullptr), completed(false) {}
 
 template<typename... Args>
-SuccessBrick<void(Args...)>::~SuccessBrick() {
+SuccessBrick<void(Args...), Und>::~SuccessBrick() {
     ABB_ASSERT(this->completed, "Not done yet");
 }
 
 template<typename... Args>
-void SuccessBrick<void(Args...)>::setResult(Args... args) {
+void SuccessBrick<void(Args...), Und>::setResult(Args... args) {
     ABB_ASSERT(!this->argsTuple, "Already got result");
     this->argsTuple.reset(new std::tuple<Args...>(args...));
     if (this->successor) {
@@ -58,7 +58,7 @@ void SuccessBrick<void(Args...)>::setResult(Args... args) {
 }
 
 template<typename... Args>
-void SuccessBrick<void(Args...)>::setSuccessor(SuccessorType & successor) {
+void SuccessBrick<void(Args...), Und>::setSuccessor(SuccessorType & successor) {
     ABB_ASSERT(!this->successor, "Already got successor");
     this->successor = &successor;
     if (this->argsTuple) {
@@ -67,7 +67,7 @@ void SuccessBrick<void(Args...)>::setSuccessor(SuccessorType & successor) {
 }
 
 template<typename... Args>
-void SuccessBrick<void(Args...)>::complete() {
+void SuccessBrick<void(Args...), Und>::complete() {
     class OnsuccessCaller {
     public:
         OnsuccessCaller(SuccessorType * successor): successor(successor) {}

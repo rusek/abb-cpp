@@ -10,14 +10,11 @@
 namespace abb {
 namespace ll {
 
-template<typename Result>
-class ProxyBrick {};
-
-template<typename... Args>
-class ProxyBrick<void(Args...)> : public Brick<void(Args...)> {
+template<typename Result, typename Reason>
+class ProxyBrick : public Brick<Result, Reason> {
 public:
-    typedef Brick<void(Args...)> BaseType;
-    typedef Successor<void(Args...)> SuccessorType;
+    typedef Brick<Result, Reason> BaseType;
+    typedef Successor<Result, Reason> SuccessorType;
 
     ProxyBrick();
 
@@ -33,16 +30,16 @@ private:
 };
 
 
-template<typename... Args>
-ProxyBrick<void(Args...)>::ProxyBrick(): brick(), successor(nullptr) {}
+template<typename Result, typename Reason>
+ProxyBrick<Result, Reason>::ProxyBrick(): brick(), successor(nullptr) {}
 
-template<typename... Args>
-ProxyBrick<void(Args...)>::~ProxyBrick() {
+template<typename Result, typename Reason>
+ProxyBrick<Result, Reason>::~ProxyBrick() {
     ABB_ASSERT(this->brick && this->successor, "Not completed yet");
 }
 
-template<typename... Args>
-void ProxyBrick<void(Args...)>::setBrick(std::unique_ptr<BaseType> brick) {
+template<typename Result, typename Reason>
+void ProxyBrick<Result, Reason>::setBrick(std::unique_ptr<BaseType> brick) {
     ABB_ASSERT(!this->brick, "Already got brick");
     this->brick = std::move(brick);
     if (this->successor) {
@@ -50,8 +47,8 @@ void ProxyBrick<void(Args...)>::setBrick(std::unique_ptr<BaseType> brick) {
     }
 }
 
-template<typename... Args>
-void ProxyBrick<void(Args...)>::setSuccessor(SuccessorType & successor) {
+template<typename Result, typename Reason>
+void ProxyBrick<Result, Reason>::setSuccessor(SuccessorType & successor) {
     ABB_ASSERT(!this->successor, "Already got successor");
     this->successor = &successor;
     if (this->brick) {

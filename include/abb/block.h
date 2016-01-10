@@ -19,21 +19,22 @@ namespace abb {
 template<typename Cont, typename Return, typename... Args>
 struct ContReturnTraits {};
 
+template<typename Cont, typename Value>
+struct ContTraits {};
+
 template<typename Cont, typename... Args>
-struct ContTraits : ContReturnTraits<Cont, typename utils::CallResult<Cont, Args...>::Type, Args...> {};
+struct ContTraits<Cont, void(Args...)> : ContReturnTraits<Cont, typename utils::CallResult<Cont, Args...>::Type, Args...> {};
 
-template<typename Done>
-class Block {};
-
-template<typename... Args>
-class Block<void(Args...)> {
+template<typename Result = Und, typename Reason = Und>
+class Block {
 public:
-    typedef void ResultType(Args...);
+    typedef Result ResultType;
+    typedef Reason ReasonType;
 
 private:
-    typedef Block<ResultType> ThisType;
-    typedef ll::Brick<ResultType> BrickType;
-    typedef ll::Successor<ResultType> SuccessorType;
+    typedef Block<ResultType, ReasonType> ThisType;
+    typedef ll::Brick<ResultType, ReasonType> BrickType;
+    typedef ll::Successor<ResultType, ReasonType> SuccessorType;
 
 public:
     Block(std::unique_ptr<BrickType> brick);
@@ -50,7 +51,7 @@ public:
     }
 
     template<typename ContType>
-    typename ContTraits<ContType, Args...>::BlockType pipe(ContType && cont);
+    typename ContTraits<ContType, ResultType>::BlockType pipe(ContType && cont);
 
     ThisType exit(std::function<void()> func);
 
@@ -63,57 +64,72 @@ private:
     }
 
     std::unique_ptr<BrickType> brick;
+
+    template<typename BlockType, typename ContType>
+    friend class PipeSuccessor;
 };
 
 
-template<typename... Args>
-Block<void(Args...)>::Block(std::unique_ptr<BrickType> brick): brick(std::move(brick)) {}
+template<typename BlockType, typename ContType>
+class PipeSuccessor {};
 
-template<typename... Args>
+template<typename... Args, typename ContType>
+class PipeSuccessor<Block<void(Args...), Und>, ContType> : public ll::Successor<void(Args...), Und> {
+private:
+    typedef void ResultType(Args...);
+    typedef Und ReasonType;
+    typedef ll::Brick<ResultType, ReasonType> BrickType;
+    typedef ContTraits<ContType, ResultType> CT;
+    typedef ll::ProxyBrick<typename CT::BlockType::ResultType, Und> ProxyType;
+
+public:
+    PipeSuccessor(
+        std::unique_ptr<BrickType> brick,
+        ContType && cont,
+        ProxyType & proxy
+    ):
+        brick(std::move(brick)),
+        cont(std::forward<ContType>(cont)),
+        proxy(proxy)
+    {
+        this->brick->setSuccessor(*this);
+    }
+
+    virtual void onsuccess(Args... args) {
+        this->proxy.setBrick(CT::call(this->cont, args...).takeBrick());
+        delete this;
+    }
+
+private:
+    std::unique_ptr<BrickType> brick;
+    typename CT::ContType cont;
+    ProxyType & proxy;
+};
+
+
+template<typename Result, typename Reason>
+Block<Result, Reason>::Block(std::unique_ptr<BrickType> brick): brick(std::move(brick)) {}
+
+template<typename Result, typename Reason>
 template<typename ContType>
-typename ContTraits<ContType, Args...>::BlockType Block<void(Args...)>::pipe(ContType && cont) {
-    typedef ContTraits<ContType, Args...> CT;
+auto Block<Result, Reason>::pipe(ContType && cont) -> typename ContTraits<ContType, ResultType>::BlockType {
+    typedef ContTraits<ContType, ResultType> CT;
     typedef typename CT::BlockType OutBlock;
     typedef typename OutBlock::BrickType OutBrickType;
 
-    typedef ll::ProxyBrick<typename OutBlock::ResultType> ProxyType;
-
-    class LeftSuccessor : public SuccessorType {
-    public:
-        LeftSuccessor(
-            std::unique_ptr<BrickType> brick,
-            ContType && cont,
-            ProxyType & proxy
-        ):
-            brick(std::move(brick)),
-            cont(std::forward<ContType>(cont)),
-            proxy(proxy)
-        {
-            this->brick->setSuccessor(*this);
-        }
-
-        virtual void onsuccess(Args... args) {
-            this->proxy.setBrick(CT::call(this->cont, args...).takeBrick());
-            delete this;
-        }
-
-    private:
-        std::unique_ptr<BrickType> brick;
-        typename CT::ContType cont;
-        ProxyType & proxy;
-    };
+    typedef ll::ProxyBrick<typename OutBlock::ResultType, Und> ProxyType;
 
     ProxyType * pipeBlock = new ProxyType();
 
-    new LeftSuccessor(this->takeBrick(), std::forward<ContType>(cont), *pipeBlock);
+    new PipeSuccessor<ThisType, ContType>(this->takeBrick(), std::forward<ContType>(cont), *pipeBlock);
 
     return std::unique_ptr<OutBrickType>(pipeBlock);
 }
 
 template<typename Cont, typename Result, typename... Args>
-struct ContReturnTraits<Cont, Block<Result>, Args...> {
+struct ContReturnTraits<Cont, Block<Result, Und>, Args...> {
     typedef typename std::decay<Cont>::type ContType;
-    typedef Block<Result> BlockType;
+    typedef Block<Result, Und> BlockType;
 
     static BlockType call(ContType & cont, Args... args) {
         return cont(args...);
@@ -122,7 +138,7 @@ struct ContReturnTraits<Cont, Block<Result>, Args...> {
 
 template<typename... Args>
 Block<void(Args...)> success(Args... args) {
-    typedef ll::SuccessBrick<void(Args...)> BrickType;
+    typedef ll::SuccessBrick<void(Args...), Und> BrickType;
 
     BrickType * brick = new BrickType;
     try {
@@ -145,27 +161,32 @@ struct ContReturnTraits<Cont, void, Args...> {
     }
 };
 
-template<typename... Args>
-auto Block<void(Args...)>::exit(std::function<void()> func) -> ThisType {
-    return std::unique_ptr<BrickType>(new ll::PureExitBrick<ResultType>(func, this->takeBrick()));
+template<typename Result, typename Reason>
+auto Block<Result, Reason>::exit(std::function<void()> func) -> ThisType {
+    return std::unique_ptr<BrickType>(new ll::PureExitBrick<ResultType, Und>(func, this->takeBrick()));
 }
 
+template<typename Result, typename Reason>
+class DetachSuccessor {};
+
 template<typename... Args>
-void Block<void(Args...)>::detach() {
-    class ImplSuccessor : public SuccessorType {
-    public:
-        ImplSuccessor(std::unique_ptr<BrickType> brick): brick(std::move(brick)) {
-            this->brick->setSuccessor(*this);
-        }
+class DetachSuccessor<void(Args...), Und> : public ll::Successor<void(Args...), Und> {
+public:
+    DetachSuccessor(std::unique_ptr<ll::Brick<void(Args...), Und>> brick): brick(std::move(brick)) {
+        this->brick->setSuccessor(*this);
+    }
 
-        virtual void onsuccess(Args...) {
-            delete this;
-        }
-    private:
-        std::unique_ptr<BrickType> brick;
-    };
+    virtual void onsuccess(Args...) {
+        delete this;
+    }
+private:
+    std::unique_ptr<ll::Brick<void(Args...), Und>> brick;
+};
 
-    new ImplSuccessor(std::move(this->brick));
+
+template<typename Result, typename Reason>
+void Block<Result, Reason>::detach() {
+    new DetachSuccessor<ResultType, ReasonType>(this->takeBrick());
 }
 
 } // namespace abb
