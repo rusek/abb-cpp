@@ -12,8 +12,15 @@
 
 #include <functional>
 #include <memory>
+#include <type_traits>
 
 namespace abb {
+
+template<typename Cont, typename Return, typename... Args>
+struct ContReturnTraits {};
+
+template<typename Cont, typename... Args>
+struct ContTraits : ContReturnTraits<Cont, typename utils::CallResult<Cont, Args...>::Type, Args...> {};
 
 template<typename Done>
 class Block {};
@@ -43,7 +50,7 @@ public:
     }
 
     template<typename ContType>
-    typename utils::CallResult<ContType, Args...>::Type pipe(ContType cont);
+    typename ContTraits<ContType, Args...>::BlockType pipe(ContType && cont);
 
     ThisType exit(std::function<void()> func);
 
@@ -64,8 +71,9 @@ Block<void(Args...)>::Block(std::unique_ptr<BrickType> brick): brick(std::move(b
 
 template<typename... Args>
 template<typename ContType>
-typename utils::CallResult<ContType, Args...>::Type Block<void(Args...)>::pipe(ContType cont) {
-    typedef typename utils::CallResult<ContType, Args...>::Type OutBlock;
+typename ContTraits<ContType, Args...>::BlockType Block<void(Args...)>::pipe(ContType && cont) {
+    typedef ContTraits<ContType, Args...> CT;
+    typedef typename CT::BlockType OutBlock;
     typedef typename OutBlock::BrickType OutBrickType;
 
     typedef ll::ProxyBrick<typename OutBlock::ResultType> ProxyType;
@@ -74,33 +82,68 @@ typename utils::CallResult<ContType, Args...>::Type Block<void(Args...)>::pipe(C
     public:
         LeftSuccessor(
             std::unique_ptr<BrickType> brick,
-            std::function<OutBlock(Args...)> cont,
+            ContType && cont,
             ProxyType & proxy
         ):
             brick(std::move(brick)),
-            cont(cont),
+            cont(std::forward<ContType>(cont)),
             proxy(proxy)
         {
             this->brick->setSuccessor(*this);
         }
 
         virtual void onsuccess(Args... args) {
-            this->proxy.setBrick(this->cont(args...).takeBrick());
+            this->proxy.setBrick(CT::call(this->cont, args...).takeBrick());
             delete this;
         }
 
     private:
         std::unique_ptr<BrickType> brick;
-        std::function<OutBlock(Args...)> cont;
+        typename CT::ContType cont;
         ProxyType & proxy;
     };
 
     ProxyType * pipeBlock = new ProxyType();
 
-    new LeftSuccessor(this->takeBrick(), cont, *pipeBlock);
+    new LeftSuccessor(this->takeBrick(), std::forward<ContType>(cont), *pipeBlock);
 
     return std::unique_ptr<OutBrickType>(pipeBlock);
 }
+
+template<typename Cont, typename Result, typename... Args>
+struct ContReturnTraits<Cont, Block<Result>, Args...> {
+    typedef typename std::decay<Cont>::type ContType;
+    typedef Block<Result> BlockType;
+
+    static BlockType call(ContType & cont, Args... args) {
+        return cont(args...);
+    }
+};
+
+template<typename... Args>
+Block<void(Args...)> success(Args... args) {
+    typedef ll::SuccessBrick<void(Args...)> BrickType;
+
+    BrickType * brick = new BrickType;
+    try {
+        brick->setResult(args...);
+    } catch(...) {
+        delete brick;
+        throw;
+    }
+    return Block<void(Args...)>(std::unique_ptr<typename BrickType::BaseType>(brick));
+}
+
+template<typename Cont, typename... Args>
+struct ContReturnTraits<Cont, void, Args...> {
+    typedef typename std::decay<Cont>::type ContType;
+    typedef Block<void()> BlockType;
+
+    static BlockType call(ContType & cont, Args... args) {
+        cont(args...);
+        return success();
+    }
+};
 
 template<typename... Args>
 auto Block<void(Args...)>::exit(std::function<void()> func) -> ThisType {

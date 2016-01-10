@@ -98,9 +98,8 @@ IntBlock increment(int val) {
     return abb::success(val + 1);
 }
 
-VoidBlock display(std::string const & msg) {
+void display(std::string const & msg) {
     std::cerr << msg << std::endl;
-    return abb::success();
 }
 
 void putFive(abb::Answer<void(int)> & answer) {

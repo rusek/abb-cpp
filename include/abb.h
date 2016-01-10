@@ -7,20 +7,6 @@
 
 namespace abb {
 
-template<typename... Args>
-Block<void(Args...)> success(Args... args) {
-    typedef ll::SuccessBrick<void(Args...)> BrickType;
-
-    BrickType * brick = new BrickType;
-    try {
-        brick->setResult(args...);
-    } catch(...) {
-        delete brick;
-        throw;
-    }
-    return Block<void(Args...)>(std::unique_ptr<typename BrickType::BaseType>(brick));
-}
-
 template<typename Result>
 class Answer {};
 
