@@ -130,10 +130,28 @@ private:
     int i;
 };
 
+typedef abb::Block<abb::Und, void(std::string)> StringErrorBlock;
+
+StringErrorBlock notFound() {
+    return abb::error<StringErrorBlock>("not found");
+}
+
 void doSth() {
     abb::impl<IntBlock>(&putFive).pipe(&increment).pipe(&increment);
 
     abb::run(DoSthLoop());
+}
+
+void doSthWithErrors() {
+    typedef abb::Block<void(int), void(std::string)> BlockType;
+
+    struct Funs {
+        static BlockType inc(int i) {
+            return abb::success<BlockType>(i + 1);
+        }
+    };
+
+    abb::error<BlockType>("bad").pipe(&Funs::inc);
 }
 
 /*
@@ -150,7 +168,7 @@ int main() {
     Timer timer;
 
     abb::Island island;
-    island.enqueueExternal(&doSth);
+    island.enqueueExternal(&doSthWithErrors);
     island.run();
 
     return 0;

@@ -26,7 +26,7 @@ class AnswerImpl {};
 template<typename... Args>
 class AnswerImpl<void(Args...)> : public Answer<void(Args...)> {
 public:
-    explicit AnswerImpl(ll::SuccessBrick<void(Args...), Und> & brick): brick(brick) {}
+    explicit AnswerImpl(ll::ValueBrick<void(Args...), Und> & brick): brick(brick) {}
 
     virtual void setResult(Args... args) {
         this->brick.setResult(std::move(args)...);
@@ -34,14 +34,14 @@ public:
     }
 
 private:
-    ll::SuccessBrick<void(Args...), Und> & brick;
+    ll::ValueBrick<void(Args...), Und> & brick;
 };
 
 } // namespace internal
 
 template<typename BlockType, typename FuncType>
 BlockType impl(FuncType func) {
-    typedef ll::SuccessBrick<typename BlockType::ResultType, Und> BrickType;
+    typedef ll::ValueBrick<typename BlockType::ResultType, Und> BrickType;
     typedef Answer<typename BlockType::ResultType> AnswerType;
 
     BrickType * brick = new BrickType;

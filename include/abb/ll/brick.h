@@ -9,13 +9,10 @@ namespace abb {
 namespace ll {
 
 template<typename Result, typename Reason>
-class Brick {};
-
-template<typename... Args>
-class Brick<void(Args...), Und> : utils::Noncopyable {
+class Brick : utils::Noncopyable {
 public:
-    typedef Brick<void(Args...), Und> BaseType;
-    typedef Successor<void(Args...), Und> SuccessorType;
+    typedef Brick<Result, Reason> BaseType;
+    typedef Successor<Result, Reason> SuccessorType;
 
     virtual void setSuccessor(SuccessorType & successor) = 0;
 

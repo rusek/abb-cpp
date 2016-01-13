@@ -14,77 +14,159 @@
 namespace abb {
 namespace ll {
 
-template<typename Result, typename Reason>
-class SuccessBrick {}; // TODO rename to ValueBrick
+namespace internal {
 
-template<typename... Args>
-class SuccessBrick<void(Args...), Und> : public Brick<void(Args...), Und> {
+template<typename Value>
+struct IsDefined : std::true_type {};
+
+template<>
+struct IsDefined<Und> : std::false_type {};
+
+template<typename Result, typename ResultFunc, typename Reason, typename ReasonFunc>
+class ValueBrick {};
+
+template<typename Result, typename... ResultArgs, typename Reason, typename... ReasonArgs>
+class ValueBrick<Result, void(ResultArgs...), Reason, void(ReasonArgs...)> : public Brick<Result, Reason> {
 public:
-    typedef Brick<void(Args...), Und> BaseType;
-    typedef Successor<void(Args...), Und> SuccessorType;
+    typedef Brick<Result, Reason> BaseType;
+    typedef Successor<Result, Reason> SuccessorType;
 
-    SuccessBrick();
+    ValueBrick();
 
-    virtual ~SuccessBrick();
+    virtual ~ValueBrick();
 
-    void setResult(Args... args);
+    void setResult(ResultArgs... args);
+    void setReason(ReasonArgs... args);
 
     virtual void setSuccessor(SuccessorType & successor);
 
 private:
+    typedef IsDefined<Result> ResultDefined;
+    typedef IsDefined<Reason> ReasonDefined;
+
+    void completeSuccess(std::true_type) {
+        class OnsuccessCaller {
+        public:
+            OnsuccessCaller(SuccessorType * successor): successor(successor) {}
+
+            void operator()(ResultArgs... args) {
+                this->successor->onsuccess(args...);
+            }
+        private:
+            SuccessorType * successor;
+        };
+
+        std::unique_ptr<std::tuple<ResultArgs...>> resultTuple(std::move(this->resultTuple));
+        this->completed = true;
+        utils::call(OnsuccessCaller(this->successor), *resultTuple);
+    }
+
+    void completeSuccess(std::false_type) {}
+
+    void completeError(std::true_type) {
+        class OnerrorCaller {
+        public:
+            OnerrorCaller(SuccessorType * successor): successor(successor) {}
+
+            void operator()(ReasonArgs... args) {
+                this->successor->onerror(args...);
+            }
+        private:
+            SuccessorType * successor;
+        };
+
+        if (this->reasonTuple) {
+            std::unique_ptr<std::tuple<ReasonArgs...>> reasonTuple(std::move(this->reasonTuple));
+            this->completed = true;
+            utils::call(OnerrorCaller(this->successor), *reasonTuple);
+        }
+    }
+
+    void completeError(std::false_type) {}
+
     void complete();
 
-    std::unique_ptr<std::tuple<Args...>> argsTuple;
+    std::unique_ptr<std::tuple<ResultArgs...>> resultTuple;
+    std::unique_ptr<std::tuple<ReasonArgs...>> reasonTuple;
     SuccessorType * successor;
     bool completed;
 };
 
 
-template<typename... Args>
-SuccessBrick<void(Args...), Und>::SuccessBrick(): argsTuple(), successor(nullptr), completed(false) {}
+template<typename Result, typename... ResultArgs, typename Reason, typename... ReasonArgs>
+ValueBrick<Result, void(ResultArgs...), Reason, void(ReasonArgs...)>::ValueBrick(): resultTuple(), reasonTuple(), successor(nullptr), completed(false) {}
 
-template<typename... Args>
-SuccessBrick<void(Args...), Und>::~SuccessBrick() {
+template<typename Result, typename... ResultArgs, typename Reason, typename... ReasonArgs>
+ValueBrick<Result, void(ResultArgs...), Reason, void(ReasonArgs...)>::~ValueBrick() {
     ABB_ASSERT(this->completed, "Not done yet");
 }
 
-template<typename... Args>
-void SuccessBrick<void(Args...), Und>::setResult(Args... args) {
-    ABB_ASSERT(!this->argsTuple, "Already got result");
-    this->argsTuple.reset(new std::tuple<Args...>(args...));
+template<typename Result, typename... ResultArgs, typename Reason, typename... ReasonArgs>
+void ValueBrick<Result, void(ResultArgs...), Reason, void(ReasonArgs...)>::setResult(ResultArgs... args) {
+    static_assert(ResultDefined::value, "Result must be defined");
+
+    ABB_ASSERT(!this->resultTuple && !this->reasonTuple, "Already got value");
+    this->resultTuple.reset(new std::tuple<ResultArgs...>(args...));
     if (this->successor) {
-        Island::current().enqueue(std::bind(&SuccessBrick::complete, this));
+        Island::current().enqueue(std::bind(&ValueBrick::complete, this));
     }
 }
 
-template<typename... Args>
-void SuccessBrick<void(Args...), Und>::setSuccessor(SuccessorType & successor) {
+template<typename Result, typename... ResultArgs, typename Reason, typename... ReasonArgs>
+void ValueBrick<Result, void(ResultArgs...), Reason, void(ReasonArgs...)>::setReason(ReasonArgs... args) {
+    static_assert(ReasonDefined::value, "Reason must be defined");
+
+    ABB_ASSERT(!this->resultTuple && !this->reasonTuple, "Already got value");
+    this->reasonTuple.reset(new std::tuple<ReasonArgs...>(args...));
+    if (this->successor) {
+        Island::current().enqueue(std::bind(&ValueBrick::complete, this));
+    }
+}
+
+template<typename Result, typename... ResultArgs, typename Reason, typename... ReasonArgs>
+void ValueBrick<Result, void(ResultArgs...), Reason, void(ReasonArgs...)>::setSuccessor(SuccessorType & successor) {
     ABB_ASSERT(!this->successor, "Already got successor");
     this->successor = &successor;
-    if (this->argsTuple) {
-        Island::current().enqueue(std::bind(&SuccessBrick::complete, this));
+    if (this->resultTuple || this->reasonTuple) {
+        Island::current().enqueue(std::bind(&ValueBrick::complete, this));
     }
 }
 
-template<typename... Args>
-void SuccessBrick<void(Args...), Und>::complete() {
-    class OnsuccessCaller {
-    public:
-        OnsuccessCaller(SuccessorType * successor): successor(successor) {}
-
-        void operator()(Args... args) {
-            this->successor->onsuccess(args...);
-        }
-    private:
-        SuccessorType * successor;
-    };
-
-    std::unique_ptr<std::tuple<Args...>> argsTuple(std::move(this->argsTuple));
-    this->completed = true;
-    utils::call(OnsuccessCaller(this->successor), *argsTuple);
+template<typename Result, typename... ResultArgs, typename Reason, typename... ReasonArgs>
+void ValueBrick<Result, void(ResultArgs...), Reason, void(ReasonArgs...)>::complete() {
+    if (ResultDefined::value && (!ReasonDefined::value || this->resultTuple)) {
+        this->completeSuccess(ResultDefined());
+    } else {
+        this->completeError(ReasonDefined());
+    }
 }
+
+template<typename Value>
+struct AsFunc {};
+
+template<typename... Args>
+struct AsFunc<void(Args...)> {
+    typedef void Type(Args...);
+};
+
+template<>
+struct AsFunc<Und> {
+    typedef void Type();
+};
+
+} // namespace internal
+
+template<typename Result, typename Reason>
+class ValueBrick : public internal::ValueBrick<
+    Result,
+    typename internal::AsFunc<Result>::Type,
+    Reason,
+    typename internal::AsFunc<Reason>::Type
+> {};
+
 
 } // namespace ll
 } // namespace abb
 
 #endif // ABB_LL_SUCCESS_BRICK_H
+
