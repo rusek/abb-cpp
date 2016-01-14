@@ -10,6 +10,7 @@
 #include <abb/ll/pureExitBrick.h>
 #include <abb/ll/successor.h>
 #include <abb/ll/detachSuccessor.h>
+#include <abb/ll/pipeBrick.h>
 
 #include <abb/utils/debug.h>
 #include <abb/utils/noncopyable.h>
@@ -38,9 +39,9 @@ Pass pass;
 template<typename BlockT, typename SuccessContT, typename ErrorContT>
 struct BlockContTraits {};
 
-template<typename BlockT, typename SuccessContT>
-struct BlockContTraits<BlockT, SuccessContT, Pass> {
-
+template<typename... ResultArgsT, typename ReasonT, typename SuccessContT, typename ErrorContT>
+struct BlockContTraits<Block<void(ResultArgsT...), ReasonT>, SuccessContT, ErrorContT> {
+    typedef typename utils::CallResult<SuccessContT, ResultArgsT...>::Type BlockType;
 };
 
 template<typename ResultT, typename ReasonT>
@@ -53,9 +54,6 @@ public:
 private:
     typedef ll::Brick<ResultType, ReasonType> BrickType;
     typedef ll::Successor<ResultType, ReasonType> SuccessorType;
-
-    template<typename SuccessContT, typename ErrorContT>
-    struct CT : BlockContTraits<BlockType, std::decay<SuccessContT>, std::decay<ErrorContT>> {};
 
 public:
     explicit Block(std::unique_ptr<BrickType> brick);
@@ -79,9 +77,30 @@ public:
     template<typename ContT>
     typename ContTraits<ContT, ResultType>::BlockType pipe(ContT && cont);
 
+    template<typename SuccessContT, typename ErrorContT>
+    typename BlockContTraits<
+        BlockType,
+        typename std::decay<SuccessContT>::type,
+        typename std::decay<ErrorContT>::type
+    >::BlockType pipe(SuccessContT && successCont, ErrorContT && errorCont);
+
     BlockType exit(std::function<void()> func);
 
 private:
+    template<typename ContT>
+    class Unpacker {
+    public:
+        explicit Unpacker(ContT && cont): cont(cont) {}
+
+        template<typename... ArgsT>
+        std::unique_ptr<BrickType> operator()(ArgsT... args) {
+            return cont(args...).takeBrick();
+        }
+
+    private:
+        ContT cont;
+    };
+
     void detach();
 
     std::unique_ptr<BrickType> takeBrick() {
@@ -187,6 +206,34 @@ auto Block<ResultT, ReasonT>::pipe(ContT && cont) -> typename ContTraits<ContT, 
     new PipeSuccessor<BlockType, OutBlockT, ContT>(this->takeBrick(), std::forward<ContT>(cont), *pipeBlock);
 
     return OutBlockT(std::unique_ptr<OutBrickType>(pipeBlock));
+}
+
+template<typename ResultT, typename ReasonT>
+template<typename SuccessContT, typename ErrorContT>
+auto Block<ResultT, ReasonT>::pipe(SuccessContT && successCont, ErrorContT && errorCont) -> typename BlockContTraits<
+    BlockType,
+    typename std::decay<SuccessContT>::type,
+    typename std::decay<ErrorContT>::type
+>::BlockType {
+    typedef typename BlockContTraits<
+        BlockType,
+        typename std::decay<SuccessContT>::type,
+        typename std::decay<ErrorContT>::type
+    >::BlockType OutBlockType;
+    typedef typename OutBlockType::BrickType OutBrickType;
+    typedef typename OutBlockType::template Unpacker<typename std::decay<SuccessContT>::type> BrickSuccessContType;
+    typedef typename OutBlockType::template Unpacker<typename std::decay<ErrorContT>::type> BrickErrorContType;
+
+    return OutBlockType(std::unique_ptr<OutBrickType>(new ll::PipeBrick<
+        ResultType,
+        ReasonType,
+        BrickSuccessContType,
+        BrickErrorContType
+    >(
+        this->takeBrick(),
+        BrickSuccessContType(std::forward<SuccessContT>(successCont)),
+        BrickErrorContType(std::forward<ErrorContT>(errorCont))
+    )));
 }
 
 template<typename ContT, typename ResultT, typename ReasonT, typename... ArgsT>

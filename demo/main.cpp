@@ -147,11 +147,19 @@ void doSthWithErrors() {
 
     struct Funs {
         static BlockType inc(int i) {
+            LOG("inc(" << i << ")");
             return abb::success<BlockType>(i + 1);
+        }
+        static BlockType suppress(std::string msg) {
+            LOG("suppress(" << msg << ")");
+            return abb::success<BlockType>(0);
         }
     };
 
-    abb::error<BlockType>("bad").pipe(&Funs::inc);
+    abb::error<BlockType>("bad")
+        .pipe(&Funs::inc, &Funs::suppress)
+        .pipe(&Funs::inc, &Funs::suppress)
+        .pipe(&Funs::inc, &Funs::suppress);
 }
 
 /*
