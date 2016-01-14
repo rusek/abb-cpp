@@ -10,36 +10,36 @@
 namespace abb {
 namespace ll {
 
-template<typename Result, typename Reason>
-class ProxyBrick : public Brick<Result, Reason> {
+template<typename ResultT, typename ReasonT>
+class ProxyBrick : public Brick<ResultT, ReasonT> {
 public:
-    typedef Brick<Result, Reason> BaseType;
-    typedef Successor<Result, Reason> SuccessorType;
+    typedef Brick<ResultT, ReasonT> BrickType;
+    typedef typename BrickType::SuccessorType SuccessorType;
 
     ProxyBrick();
 
     virtual ~ProxyBrick();
 
-    void setBrick(std::unique_ptr<BaseType> brick);
+    void setBrick(std::unique_ptr<BrickType> brick);
 
     virtual void setSuccessor(SuccessorType & successor);
 
 private:
-    std::unique_ptr<BaseType> brick;
+    std::unique_ptr<BrickType> brick;
     SuccessorType * successor;
 };
 
 
-template<typename Result, typename Reason>
-ProxyBrick<Result, Reason>::ProxyBrick(): brick(), successor(nullptr) {}
+template<typename ResultT, typename ReasonT>
+ProxyBrick<ResultT, ReasonT>::ProxyBrick(): brick(), successor(nullptr) {}
 
-template<typename Result, typename Reason>
-ProxyBrick<Result, Reason>::~ProxyBrick() {
+template<typename ResultT, typename ReasonT>
+ProxyBrick<ResultT, ReasonT>::~ProxyBrick() {
     ABB_ASSERT(this->brick && this->successor, "Not completed yet");
 }
 
-template<typename Result, typename Reason>
-void ProxyBrick<Result, Reason>::setBrick(std::unique_ptr<BaseType> brick) {
+template<typename ResultT, typename ReasonT>
+void ProxyBrick<ResultT, ReasonT>::setBrick(std::unique_ptr<BrickType> brick) {
     ABB_ASSERT(!this->brick, "Already got brick");
     this->brick = std::move(brick);
     if (this->successor) {
@@ -47,8 +47,8 @@ void ProxyBrick<Result, Reason>::setBrick(std::unique_ptr<BaseType> brick) {
     }
 }
 
-template<typename Result, typename Reason>
-void ProxyBrick<Result, Reason>::setSuccessor(SuccessorType & successor) {
+template<typename ResultT, typename ReasonT>
+void ProxyBrick<ResultT, ReasonT>::setSuccessor(SuccessorType & successor) {
     ABB_ASSERT(!this->successor, "Already got successor");
     this->successor = &successor;
     if (this->brick) {

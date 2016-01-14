@@ -2,8 +2,10 @@
 #define ABB_H
 
 #include <abb/island.h>
-#include <abb/ll/successBrick.h>
+#include <abb/ll/valueBrick.h>
 #include <abb/block.h>
+#include <abb/error.h>
+#include <abb/success.h>
 
 namespace abb {
 
@@ -41,10 +43,10 @@ private:
 
 template<typename BlockType, typename FuncType>
 BlockType impl(FuncType func) {
-    typedef ll::ValueBrick<typename BlockType::ResultType, Und> BrickType;
+    typedef ll::ValueBrick<typename BlockType::ResultType, Und> ValueBrickType;
     typedef Answer<typename BlockType::ResultType> AnswerType;
 
-    BrickType * brick = new BrickType;
+    ValueBrickType * brick = new ValueBrickType;
     try {
         AnswerType * answer = new internal::AnswerImpl<typename BlockType::ResultType>(*brick);
         func(*answer);
@@ -53,7 +55,7 @@ BlockType impl(FuncType func) {
         throw;
     }
 
-    return BlockType(std::unique_ptr<typename BrickType::BaseType>(brick));
+    return BlockType(std::unique_ptr<typename ValueBrickType::BrickType>(brick));
 }
 
 template<typename FuncType>

@@ -6,31 +6,40 @@
 namespace abb {
 namespace ll {
 
-template<typename Result, typename Reason>
+template<typename ResultT, typename ReasonT>
 class Successor {
 public:
 };
 
-template<typename... Args>
-class Successor<void(Args...), Und> {
+template<typename... ArgsT>
+class Successor<void(ArgsT...), Und> {
 public:
+    typedef void ResultType(ArgsT...);
+    typedef Und ReasonType;
+
     virtual ~Successor() {}
 
-    virtual void onsuccess(Args...) = 0;
+    virtual void onsuccess(ArgsT...) = 0;
 };
 
-template<typename... Args>
-class Successor<Und, void(Args...)> {
+template<typename... ArgsT>
+class Successor<Und, void(ArgsT...)> {
 public:
+    typedef Und ResultType;
+    typedef void ReasonTypes(ArgsT...);
+
     virtual ~Successor() {}
 
-    virtual void onerror(Args...) = 0;
+    virtual void onerror(ArgsT...) = 0;
 };
 
-template<typename... ResultArgs, typename... ReasonArgs>
-class Successor<void(ResultArgs...), void(ReasonArgs...)> :
-        public Successor<void(ResultArgs...), Und>,
-        public Successor<Und, void(ReasonArgs...)> {
+template<typename... ResultArgsT, typename... ReasonArgsT>
+class Successor<void(ResultArgsT...), void(ReasonArgsT...)> :
+        public Successor<void(ResultArgsT...), Und>,
+        public Successor<Und, void(ReasonArgsT...)> {
+public:
+    typedef void ResultType(ResultArgsT...);
+    typedef void ReasonType(ReasonArgsT...);
 };
 
 } // namespace ll
