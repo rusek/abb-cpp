@@ -98,8 +98,9 @@ IntBlock increment(int val) {
     return abb::success(val + 1);
 }
 
-void display(std::string const & msg) {
+VoidBlock display(std::string const & msg) {
     std::cerr << msg << std::endl;
+    return abb::success();
 }
 
 void putFive(abb::Answer<void(int)> & answer) {
@@ -162,6 +163,19 @@ void doSthWithErrors() {
         .pipe(&Funs::inc, &Funs::suppress);
 }
 
+void doSthOnErrors() {
+    typedef abb::Block<void(int)> BlockType;
+
+    struct Funs {
+        static BlockType inc(int i) {
+            LOG("inc(" << i << ")");
+            return abb::success(i + 1);
+        }
+    };
+
+    abb::success(1).pipe(&Funs::inc, abb::pass);
+}
+
 /*
 function doSth() {
     var i = 0;
@@ -176,7 +190,7 @@ int main() {
     Timer timer;
 
     abb::Island island;
-    island.enqueueExternal(&doSthWithErrors);
+    island.enqueueExternal(&doSth);
     island.run();
 
     return 0;
