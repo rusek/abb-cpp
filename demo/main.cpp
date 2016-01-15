@@ -191,6 +191,8 @@ int main() {
 
     abb::Island island;
     island.enqueueExternal(&doSth);
+    island.enqueueExternal(&doSthWithErrors);
+    island.enqueueExternal(&doSthOnErrors);
     island.run();
 
     return 0;

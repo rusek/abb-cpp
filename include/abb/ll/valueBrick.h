@@ -7,6 +7,7 @@
 
 #include <abb/utils/debug.h>
 #include <abb/utils/call.h>
+#include <abb/utils/vault.h>
 
 #include <memory>
 #include <tuple>
@@ -16,36 +17,23 @@ namespace ll {
 
 namespace internal {
 
+typedef int State;
+
+enum StateFlags {
+    NEW_STATE = 0,
+    SUCCESS_STATE = 1,
+    ERROR_STATE = 2,
+    DONE_STATE = 4
+};
+
 template<typename SuccessorT, typename... ArgsT>
 inline void callSuccess(SuccessorT & successor, std::tuple<ArgsT...> result) {
-    class OnsuccessCaller {
-    public:
-        OnsuccessCaller(SuccessorT * successor): successor(successor) {}
-
-        void operator()(ArgsT... args) {
-            this->successor->onsuccess(args...);
-        }
-    private:
-        SuccessorT * successor;
-    };
-
-    utils::call(OnsuccessCaller(&successor), result);
+    utils::call([&](ArgsT... args) { successor.onsuccess(args...); }, result);
 }
 
 template<typename SuccessorT, typename... ArgsT>
 inline void callError(SuccessorT & successor, std::tuple<ArgsT...> reason) {
-    class OnerrorCaller {
-    public:
-        OnerrorCaller(SuccessorT * successor): successor(successor) {}
-
-        void operator()(ArgsT... args) {
-            this->successor->onerror(args...);
-        }
-    private:
-        SuccessorT * successor;
-    };
-
-    utils::call(OnerrorCaller(&successor), reason);
+    utils::call([&](ArgsT... args) { successor.onerror(args...); }, reason);
 }
 
 } // namespace internal
@@ -71,23 +59,25 @@ public:
 private:
     void complete();
 
-    std::unique_ptr<std::tuple<ResultArgsT...>> resultTuple;
+    utils::Vault<std::tuple<ResultArgsT...>> result;
+    internal::State state;
     SuccessorType * successor;
-    bool completed;
 };
 
 template<typename... ResultArgsT>
-ValueBrick<void(ResultArgsT...), Und>::ValueBrick(): resultTuple(), successor(nullptr), completed(false) {}
+ValueBrick<void(ResultArgsT...), Und>::ValueBrick(): state(internal::NEW_STATE), successor(nullptr) {}
 
 template<typename... ResultArgsT>
 ValueBrick<void(ResultArgsT...), Und>::~ValueBrick() {
-    ABB_ASSERT(this->completed, "Not done yet");
+    ABB_ASSERT(this->state & internal::DONE_STATE, "Not done yet");
+    this->result.destroy();
 }
 
 template<typename... ResultArgsT>
 void ValueBrick<void(ResultArgsT...), Und>::setResult(ResultArgsT... args) {
-    ABB_ASSERT(!this->resultTuple, "Already got value");
-    this->resultTuple.reset(new std::tuple<ResultArgsT...>(args...));
+    ABB_ASSERT(this->state == internal::NEW_STATE, "Already got value");
+    this->result.init(args...);
+    this->state = internal::SUCCESS_STATE;
     if (this->successor) {
         Island::current().enqueue(std::bind(&ValueBrick::complete, this));
     }
@@ -97,15 +87,15 @@ template<typename... ResultArgsT>
 void ValueBrick<void(ResultArgsT...), Und>::setSuccessor(SuccessorType & successor) {
     ABB_ASSERT(!this->successor, "Already got successor");
     this->successor = &successor;
-    if (this->resultTuple) {
+    if (this->state != internal::NEW_STATE) {
         Island::current().enqueue(std::bind(&ValueBrick::complete, this));
     }
 }
 
 template<typename... ResultArgsT>
 void ValueBrick<void(ResultArgsT...), Und>::complete() {
-    this->completed = true;
-    internal::callSuccess(*this->successor, *this->resultTuple);
+    this->state |= internal::DONE_STATE;
+    internal::callSuccess(*this->successor, *this->result);
 }
 
 template<typename... ReasonArgsT>
@@ -125,23 +115,25 @@ public:
 private:
     void complete();
 
-    std::unique_ptr<std::tuple<ReasonArgsT...>> reasonTuple;
+    utils::Vault<std::tuple<ReasonArgsT...>> reason;
+    internal::State state;
     SuccessorType * successor;
-    bool completed;
 };
 
 template<typename... ReasonArgsT>
-ValueBrick<Und, void(ReasonArgsT...)>::ValueBrick(): reasonTuple(), successor(nullptr), completed(false) {}
+ValueBrick<Und, void(ReasonArgsT...)>::ValueBrick(): state(internal::NEW_STATE), successor(nullptr) {}
 
 template<typename... ReasonArgsT>
 ValueBrick<Und, void(ReasonArgsT...)>::~ValueBrick() {
-    ABB_ASSERT(this->completed, "Not done yet");
+    ABB_ASSERT(this->state & internal::DONE_STATE, "Not done yet");
+    this->reason.destroy();
 }
 
 template<typename... ReasonArgsT>
 void ValueBrick<Und, void(ReasonArgsT...)>::setReason(ReasonArgsT... args) {
-    ABB_ASSERT(!this->reasonTuple, "Already got value");
-    this->reasonTuple.reset(new std::tuple<ReasonArgsT...>(args...));
+    ABB_ASSERT(!this->state == internal::NEW_STATE, "Already got value");
+    this->reason.init(args...);
+    this->state = internal::ERROR_STATE;
     if (this->successor) {
         Island::current().enqueue(std::bind(&ValueBrick::complete, this));
     }
@@ -151,15 +143,15 @@ template<typename... ReasonArgsT>
 void ValueBrick<Und, void(ReasonArgsT...)>::setSuccessor(SuccessorType & successor) {
     ABB_ASSERT(!this->successor, "Already got successor");
     this->successor = &successor;
-    if (this->reasonTuple) {
+    if (this->state != internal::NEW_STATE) {
         Island::current().enqueue(std::bind(&ValueBrick::complete, this));
     }
 }
 
 template<typename... ReasonArgsT>
 void ValueBrick<Und, void(ReasonArgsT...)>::complete() {
-    this->completed = true;
-    internal::callError(*this->successor, *this->reasonTuple);
+    this->state |= internal::DONE_STATE;
+    internal::callError(*this->successor, *this->reason);
 }
 
 
@@ -181,25 +173,33 @@ public:
 private:
     void complete();
 
-    std::unique_ptr<std::tuple<ResultArgsT...>> resultTuple;
-    std::unique_ptr<std::tuple<ReasonArgsT...>> reasonTuple;
+    union {
+        utils::Vault<std::tuple<ResultArgsT...>> result;
+        utils::Vault<std::tuple<ReasonArgsT...>> reason;
+    } value;
+    internal::State state;
     SuccessorType * successor;
-    bool completed;
 };
 
 
 template<typename... ResultArgsT, typename... ReasonArgsT>
-ValueBrick<void(ResultArgsT...), void(ReasonArgsT...)>::ValueBrick(): resultTuple(), reasonTuple(), successor(nullptr), completed(false) {}
+ValueBrick<void(ResultArgsT...), void(ReasonArgsT...)>::ValueBrick(): state(internal::NEW_STATE), successor(nullptr) {}
 
 template<typename... ResultArgsT, typename... ReasonArgsT>
 ValueBrick<void(ResultArgsT...), void(ReasonArgsT...)>::~ValueBrick() {
-    ABB_ASSERT(this->completed, "Not done yet");
+    ABB_ASSERT(this->state & internal::DONE_STATE, "Not done yet");
+    if (this->state & internal::SUCCESS_STATE) {
+        this->value.result.destroy();
+    } else {
+        this->value.reason.destroy();
+    }
 }
 
 template<typename... ResultArgsT, typename... ReasonArgsT>
 void ValueBrick<void(ResultArgsT...), void(ReasonArgsT...)>::setResult(ResultArgsT... args) {
-    ABB_ASSERT(!this->resultTuple && !this->reasonTuple, "Already got value");
-    this->resultTuple.reset(new std::tuple<ResultArgsT...>(args...));
+    ABB_ASSERT(this->state == internal::NEW_STATE, "Already got value");
+    this->value.result.init(args...);
+    this->state = internal::SUCCESS_STATE;
     if (this->successor) {
         Island::current().enqueue(std::bind(&ValueBrick::complete, this));
     }
@@ -207,8 +207,9 @@ void ValueBrick<void(ResultArgsT...), void(ReasonArgsT...)>::setResult(ResultArg
 
 template<typename... ResultArgsT, typename... ReasonArgsT>
 void ValueBrick<void(ResultArgsT...), void(ReasonArgsT...)>::setReason(ReasonArgsT... args) {
-    ABB_ASSERT(!this->resultTuple && !this->reasonTuple, "Already got value");
-    this->reasonTuple.reset(new std::tuple<ReasonArgsT...>(args...));
+    ABB_ASSERT(this->state == internal::NEW_STATE, "Already got value");
+    this->value.reason.init(args...);
+    this->state = internal::ERROR_STATE;
     if (this->successor) {
         Island::current().enqueue(std::bind(&ValueBrick::complete, this));
     }
@@ -218,24 +219,20 @@ template<typename... ResultArgsT, typename... ReasonArgsT>
 void ValueBrick<void(ResultArgsT...), void(ReasonArgsT...)>::setSuccessor(SuccessorType & successor) {
     ABB_ASSERT(!this->successor, "Already got successor");
     this->successor = &successor;
-    if (this->resultTuple || this->reasonTuple) {
+    if (this->state != internal::NEW_STATE) {
         Island::current().enqueue(std::bind(&ValueBrick::complete, this));
     }
 }
 
 template<typename... ResultArgsT, typename... ReasonArgsT>
 void ValueBrick<void(ResultArgsT...), void(ReasonArgsT...)>::complete() {
-    this->completed = true;
-    if (this->resultTuple) {
-        internal::callSuccess(*this->successor, *this->resultTuple);
+    this->state |= internal::DONE_STATE;
+    if (this->state & internal::SUCCESS_STATE) {
+        internal::callSuccess(*this->successor, *this->value.result);
     } else {
-        internal::callError(*this->successor, *this->reasonTuple);
+        internal::callError(*this->successor, *this->value.reason);
     }
 }
-
-
-
-
 
 } // namespace ll
 } // namespace abb
