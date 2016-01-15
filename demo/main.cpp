@@ -98,9 +98,8 @@ IntBlock increment(int val) {
     return abb::success(val + 1);
 }
 
-VoidBlock display(std::string const & msg) {
+void display(std::string const & msg) {
     std::cerr << msg << std::endl;
-    return abb::success();
 }
 
 void putFive(abb::Answer<void(int)> & answer) {
@@ -160,7 +159,8 @@ void doSthWithErrors() {
     abb::error<BlockType>("bad")
         .pipe(&Funs::inc, &Funs::suppress)
         .pipe(&Funs::inc, &Funs::suppress)
-        .pipe(&Funs::inc, &Funs::suppress);
+        .pipe(&Funs::inc)
+        .pipe(abb::pass, &Funs::suppress);
 }
 
 void doSthOnErrors() {

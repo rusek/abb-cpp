@@ -8,7 +8,7 @@
 namespace abb {
 
 template<typename BlockT = void, typename... ArgsT>
-typename utils::Alternative<BlockT, Block<void(ArgsT...)>>::Type success(ArgsT... args);
+typename utils::Alternative<BlockT, Block<void(typename std::decay<ArgsT>::type...)>>::Type success(ArgsT &&... args);
 
 } // namespace abb
 
