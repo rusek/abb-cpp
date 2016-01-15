@@ -51,7 +51,7 @@ private:
 
 template<typename... ResultArgsT, typename SuccessContT>
 void PipeBrick<void(ResultArgsT...), Und, SuccessContT, Und>::onsuccess(ResultArgsT... args) {
-    this->proxyBrick.setBrick(this->successCont(args...));
+    this->proxyBrick.setBrick(this->successCont(std::move(args)...));
 }
 
 template<typename... ResultArgsT, typename SuccessContT>
@@ -96,7 +96,7 @@ private:
 
 template<typename... ReasonArgsT, typename ErrorContT>
 void PipeBrick<Und, void(ReasonArgsT...), Und, ErrorContT>::onerror(ReasonArgsT... args) {
-    this->proxyBrick.setBrick(this->errorCont(args...));
+    this->proxyBrick.setBrick(this->errorCont(std::move(args)...));
 }
 
 template<typename... ReasonArgsT, typename ErrorContT>

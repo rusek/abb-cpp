@@ -176,6 +176,33 @@ void doSthOnErrors() {
     abb::success(1).pipe(&Funs::inc, abb::pass);
 }
 
+struct NoncopyableIncrement {
+    NoncopyableIncrement() {}
+    NoncopyableIncrement(NoncopyableIncrement const&) = delete;
+    NoncopyableIncrement(NoncopyableIncrement &&) = default;
+
+    IntBlock operator()(int value) {
+        return abb::success(value + 1);
+    }
+};
+
+void doSthNoncopyableIncrement() {
+    abb::success(10).pipe(NoncopyableIncrement());
+}
+
+typedef std::unique_ptr<int> UniqueInt;
+typedef abb::Block<void(UniqueInt)> UniqueIntBlock;
+
+void doSthWithUniqueInt() {
+    struct Funs {
+        static UniqueIntBlock inc(UniqueInt i) {
+            (*i)++;
+            return abb::success(std::move(i));
+        }
+    };
+    abb::success(std::unique_ptr<int>(new int(5))).pipe(&Funs::inc);
+}
+
 /*
 function doSth() {
     var i = 0;

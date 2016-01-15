@@ -27,13 +27,19 @@ enum StateFlags {
 };
 
 template<typename SuccessorT, typename... ArgsT>
-inline void callSuccess(SuccessorT & successor, std::tuple<ArgsT...> result) {
-    utils::call([&](ArgsT... args) { successor.onsuccess(args...); }, result);
+inline void callSuccess(SuccessorT & successor, std::tuple<ArgsT...> && result) {
+    utils::call(
+        [&](ArgsT &&... args) { successor.onsuccess(std::forward<ArgsT>(args)...); },
+        std::forward<std::tuple<ArgsT...>>(result)
+    );
 }
 
 template<typename SuccessorT, typename... ArgsT>
-inline void callError(SuccessorT & successor, std::tuple<ArgsT...> reason) {
-    utils::call([&](ArgsT... args) { successor.onerror(args...); }, reason);
+inline void callError(SuccessorT & successor, std::tuple<ArgsT...> && reason) {
+    utils::call(
+        [&](ArgsT &&... args) { successor.onerror(std::forward<ArgsT>(args)...); },
+        std::forward<std::tuple<ArgsT...>>(reason)
+    );
 }
 
 } // namespace internal
@@ -76,7 +82,7 @@ ValueBrick<void(ResultArgsT...), Und>::~ValueBrick() {
 template<typename... ResultArgsT>
 void ValueBrick<void(ResultArgsT...), Und>::setResult(ResultArgsT... args) {
     ABB_ASSERT(this->state == internal::NEW_STATE, "Already got value");
-    this->result.init(args...);
+    this->result.init(std::move(args)...);
     this->state = internal::SUCCESS_STATE;
     if (this->successor) {
         Island::current().enqueue(std::bind(&ValueBrick::complete, this));
@@ -95,7 +101,7 @@ void ValueBrick<void(ResultArgsT...), Und>::setSuccessor(SuccessorType & success
 template<typename... ResultArgsT>
 void ValueBrick<void(ResultArgsT...), Und>::complete() {
     this->state |= internal::DONE_STATE;
-    internal::callSuccess(*this->successor, *this->result);
+    internal::callSuccess(*this->successor, std::move(*this->result));
 }
 
 template<typename... ReasonArgsT>
@@ -132,7 +138,7 @@ ValueBrick<Und, void(ReasonArgsT...)>::~ValueBrick() {
 template<typename... ReasonArgsT>
 void ValueBrick<Und, void(ReasonArgsT...)>::setReason(ReasonArgsT... args) {
     ABB_ASSERT(!this->state == internal::NEW_STATE, "Already got value");
-    this->reason.init(args...);
+    this->reason.init(std::move(args)...);
     this->state = internal::ERROR_STATE;
     if (this->successor) {
         Island::current().enqueue(std::bind(&ValueBrick::complete, this));
@@ -151,7 +157,7 @@ void ValueBrick<Und, void(ReasonArgsT...)>::setSuccessor(SuccessorType & success
 template<typename... ReasonArgsT>
 void ValueBrick<Und, void(ReasonArgsT...)>::complete() {
     this->state |= internal::DONE_STATE;
-    internal::callError(*this->successor, *this->reason);
+    internal::callError(*this->successor, std::move(*this->reason));
 }
 
 
@@ -198,7 +204,7 @@ ValueBrick<void(ResultArgsT...), void(ReasonArgsT...)>::~ValueBrick() {
 template<typename... ResultArgsT, typename... ReasonArgsT>
 void ValueBrick<void(ResultArgsT...), void(ReasonArgsT...)>::setResult(ResultArgsT... args) {
     ABB_ASSERT(this->state == internal::NEW_STATE, "Already got value");
-    this->value.result.init(args...);
+    this->value.result.init(std::move(args)...);
     this->state = internal::SUCCESS_STATE;
     if (this->successor) {
         Island::current().enqueue(std::bind(&ValueBrick::complete, this));
@@ -208,7 +214,7 @@ void ValueBrick<void(ResultArgsT...), void(ReasonArgsT...)>::setResult(ResultArg
 template<typename... ResultArgsT, typename... ReasonArgsT>
 void ValueBrick<void(ResultArgsT...), void(ReasonArgsT...)>::setReason(ReasonArgsT... args) {
     ABB_ASSERT(this->state == internal::NEW_STATE, "Already got value");
-    this->value.reason.init(args...);
+    this->value.reason.init(std::move(args)...);
     this->state = internal::ERROR_STATE;
     if (this->successor) {
         Island::current().enqueue(std::bind(&ValueBrick::complete, this));
@@ -228,9 +234,9 @@ template<typename... ResultArgsT, typename... ReasonArgsT>
 void ValueBrick<void(ResultArgsT...), void(ReasonArgsT...)>::complete() {
     this->state |= internal::DONE_STATE;
     if (this->state & internal::SUCCESS_STATE) {
-        internal::callSuccess(*this->successor, *this->value.result);
+        internal::callSuccess(*this->successor, std::move(*this->value.result));
     } else {
-        internal::callError(*this->successor, *this->value.reason);
+        internal::callError(*this->successor, std::move(*this->value.reason));
     }
 }
 
