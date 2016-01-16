@@ -2,9 +2,9 @@
 
 #include <functional>
 
-typedef abb::VoidBlock VoidBlock;
-typedef abb::Block<void(int)> IntBlock;
-typedef abb::Block<void(int&)> IntRefBlock;
+typedef abb::Block<void> VoidBlock;
+typedef abb::Block<int> IntBlock;
+typedef abb::Block<int&> IntRefBlock;
 
 class IdentityInt {
 public:
@@ -21,7 +21,7 @@ private:
     int val;
 };
 
-typedef abb::Block<void(IdentityInt&)> IdentityIntRefBlock;
+typedef abb::Block<IdentityInt&> IdentityIntRefBlock;
 
 template<typename BlockT, bool Ok, typename... ArgsT>
 BlockT value(ArgsT &&... args) {
@@ -92,7 +92,7 @@ void SuccessRefPipingTest::operator()() {
 }
 
 void testErrorPiping() {
-    typedef abb::Block<abb::Und, void(int)> BlockType;
+    typedef abb::ErrorBlock<int> BlockType;
 
     struct Funcs {
         static BlockType requireSeven(int num) {

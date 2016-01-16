@@ -3,14 +3,24 @@
 
 #include <abb/blockFwd.h>
 
-#include <abb/ll/valueTraits.h>
-
 #include <abb/utils/alternative.h>
 
 namespace abb {
 
+namespace internal {
+
+template<typename BlockT, typename... ArgsT>
+struct ErrorReturn {
+    typedef utils::AlternativeT<BlockT, Block<Und, void(typename std::decay<ArgsT>::type...)>> Type;
+};
+
+template<typename BlockT, typename... ArgsT>
+using ErrorReturnT = typename ErrorReturn<BlockT, ArgsT...>::Type;
+
+} // namespace internal
+
 template<typename BlockT = void, typename... ArgsT>
-typename utils::Alternative<BlockT, Block<Und, typename ll::ArgsToValue<ArgsT...>::Type>>::Type error(ArgsT &&... args);
+internal::ErrorReturnT<BlockT, ArgsT...> error(ArgsT &&... args);
 
 } // namespace abb
 

@@ -2,18 +2,17 @@
 #define ABB_SUCCESS_H
 
 #include <abb/ll/valueBrick.h>
-#include <abb/ll/valueTraits.h>
 #include <abb/blockFwd.h>
 
-#include <abb/utils/alternative.h>
+#include <abb/ll/valueBrick.h>
 
 #include <memory>
 
 namespace abb {
 
-template<typename BlockT = void, typename... ArgsT>
-typename utils::Alternative<BlockT, Block<typename ll::ArgsToValue<ArgsT...>::Type>>::Type success(ArgsT &&... args) {
-    typedef typename utils::Alternative<BlockT, Block<typename ll::ArgsToValue<ArgsT...>::Type>>::Type BlockType;
+template<typename BlockT, typename... ArgsT>
+internal::SuccessReturnT<BlockT, ArgsT...> success(ArgsT &&... args) {
+    typedef internal::SuccessReturnT<BlockT, ArgsT...> BlockType;
     typedef ll::ValueBrick<typename BlockType::ResultType, typename BlockType::ReasonType> ValueBrickType;
 
     ValueBrickType * brick = new ValueBrickType;

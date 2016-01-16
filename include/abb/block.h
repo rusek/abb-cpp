@@ -42,7 +42,7 @@ template<typename BlockT, typename SuccessContT, typename ErrorContT>
 struct BlockContTraits {};
 
 template<typename... ResultArgsT, typename SuccessContT>
-class BlockContTraits<Block<void(ResultArgsT...), Und>, SuccessContT, Pass> {
+class BlockContTraits<BaseBlock<void(ResultArgsT...), Und>, SuccessContT, Pass> {
 private:
     typedef ContTraits<SuccessContT, ResultArgsT...> SuccessContTraits;
 public:
@@ -52,7 +52,7 @@ public:
 };
 
 template<typename... ReasonArgsT, typename ErrorContT>
-class BlockContTraits<Block<Und, void(ReasonArgsT...)>, Pass, ErrorContT> {
+class BlockContTraits<BaseBlock<Und, void(ReasonArgsT...)>, Pass, ErrorContT> {
 private:
     typedef ContTraits<ErrorContT, ReasonArgsT...> ErrorContTraits;
 public:
@@ -62,7 +62,7 @@ public:
 };
 
 template<typename... ResultArgsT, typename... ReasonArgsT, typename SuccessContT>
-class BlockContTraits<Block<void(ResultArgsT...), void(ReasonArgsT...)>, SuccessContT, Pass> {
+class BlockContTraits<BaseBlock<void(ResultArgsT...), void(ReasonArgsT...)>, SuccessContT, Pass> {
 private:
     typedef ContTraits<SuccessContT, ResultArgsT...> SuccessContTraits;
 public:
@@ -76,7 +76,7 @@ public:
 };
 
 template<typename... ResultArgsT, typename... ReasonArgsT, typename ErrorContT>
-class BlockContTraits<Block<void(ResultArgsT...), void(ReasonArgsT...)>, Pass, ErrorContT> {
+class BlockContTraits<BaseBlock<void(ResultArgsT...), void(ReasonArgsT...)>, Pass, ErrorContT> {
 private:
     typedef ContTraits<ErrorContT, ReasonArgsT...> ErrorContTraits;
 public:
@@ -90,7 +90,7 @@ public:
 };
 
 template<typename... ResultArgsT, typename... ReasonArgsT, typename SuccessContT, typename ErrorContT>
-class BlockContTraits<Block<void(ResultArgsT...), void(ReasonArgsT...)>, SuccessContT, ErrorContT> {
+class BlockContTraits<BaseBlock<void(ResultArgsT...), void(ReasonArgsT...)>, SuccessContT, ErrorContT> {
 private:
     typedef ContTraits<SuccessContT, ResultArgsT...> SuccessContTraits;
     typedef ContTraits<ErrorContT, ReasonArgsT...> ErrorContTraits;
@@ -109,21 +109,21 @@ public:
 
 
 template<typename ResultT, typename ReasonT>
-class Block {
+class BaseBlock {
 public:
     typedef ResultT ResultType;
     typedef ReasonT ReasonType;
-    typedef Block<ResultType, ReasonType> BlockType;
+    typedef BaseBlock<ResultType, ReasonType> BlockType;
 
 private:
     typedef ll::Brick<ResultType, ReasonType> BrickType;
     typedef ll::Successor<ResultType, ReasonType> SuccessorType;
 
 public:
-    explicit Block(std::unique_ptr<BrickType> brick);
-    Block(BlockType &&) = default;
+    explicit BaseBlock(std::unique_ptr<BrickType> brick);
+    BaseBlock(BlockType &&) = default;
 
-    ~Block() {
+    ~BaseBlock() {
         if (!this->empty()) {
             this->detach();
         }
@@ -178,17 +178,17 @@ private:
     std::unique_ptr<BrickType> brick;
 
     template<typename FriendResultT, typename FriendReasonT>
-    friend class Block;
+    friend class BaseBlock;
 };
 
 template<typename ResultT, typename ReasonT>
-Block<ResultT, ReasonT>::Block(std::unique_ptr<BrickType> brick): brick(std::move(brick)) {}
+BaseBlock<ResultT, ReasonT>::BaseBlock(std::unique_ptr<BrickType> brick): brick(std::move(brick)) {}
 
 namespace internal {
 
 template<typename ContT, typename... ArgsT>
 struct ContTraitsWithReturn<ContT, void, ArgsT...> {
-    typedef Block<void()> BlockType;
+    typedef BaseBlock<void(), Und> BlockType;
     class ContType {
     public:
         template<typename ArgT>
@@ -223,7 +223,7 @@ struct ContBuilder<ReturnT, Pass, ArgT> {
 
 template<typename ResultT, typename ReasonT>
 template<typename SuccessContT, typename ErrorContT>
-auto Block<ResultT, ReasonT>::pipe(
+auto BaseBlock<ResultT, ReasonT>::pipe(
     SuccessContT && successCont,
     ErrorContT && errorCont
 ) -> typename internal::BlockContTraits<
@@ -262,12 +262,12 @@ auto Block<ResultT, ReasonT>::pipe(
 }
 
 template<typename ResultT, typename ReasonT>
-auto Block<ResultT, ReasonT>::exit(std::function<void()> func) -> BlockType {
+auto BaseBlock<ResultT, ReasonT>::exit(std::function<void()> func) -> BlockType {
     return BlockType(std::unique_ptr<BrickType>(new ll::PureExitBrick<ResultType, Und>(func, this->takeBrick())));
 }
 
 template<typename ResultT, typename ReasonT>
-void Block<ResultT, ReasonT>::detach() {
+void BaseBlock<ResultT, ReasonT>::detach() {
     new ll::DetachSuccessor<ResultType, ReasonType>(this->takeBrick());
 }
 

@@ -6,13 +6,13 @@
 
 #include <abb/ll/valueBrick.h>
 
-#include <abb/utils/alternative.h>
+#include <memory>
 
 namespace abb {
 
-template<typename BlockT = void, typename... ArgsT>
-typename utils::Alternative<BlockT, Block<Und, typename ll::ArgsToValue<ArgsT...>::Type>>::Type error(ArgsT &&... args) {
-    typedef typename utils::Alternative<BlockT, Block<Und, typename ll::ArgsToValue<ArgsT...>::Type>>::Type BlockType;
+template<typename BlockT, typename... ArgsT>
+internal::ErrorReturnT<BlockT, ArgsT...> error(ArgsT &&... args) {
+    typedef internal::ErrorReturnT<BlockT, ArgsT...> BlockType;
     typedef ll::ValueBrick<typename BlockType::ResultType, typename BlockType::ReasonType> ValueBrickType;
 
     ValueBrickType * brick = new ValueBrickType;

@@ -12,6 +12,8 @@ struct Alternative {
 template<typename... ArgsT>
 struct Alternative<void, ArgsT...> : Alternative<ArgsT...> {};
 
+template<typename... ArgsT>
+using AlternativeT = typename Alternative<ArgsT...>::Type;
 
 } // namespace utils
 } // namespace abb
