@@ -2,6 +2,7 @@
 #define ABB_SUCCESS_H
 
 #include <abb/ll/valueBrick.h>
+#include <abb/ll/valueTraits.h>
 #include <abb/blockFwd.h>
 
 #include <abb/utils/alternative.h>
@@ -11,8 +12,8 @@
 namespace abb {
 
 template<typename BlockT = void, typename... ArgsT>
-typename utils::Alternative<BlockT, Block<void(typename std::decay<ArgsT>::type...)>>::Type success(ArgsT &&... args) {
-    typedef typename utils::Alternative<BlockT, Block<void(ArgsT...)>>::Type BlockType;
+typename utils::Alternative<BlockT, Block<typename ll::ArgsToValue<ArgsT...>::Type>>::Type success(ArgsT &&... args) {
+    typedef typename utils::Alternative<BlockT, Block<typename ll::ArgsToValue<ArgsT...>::Type>>::Type BlockType;
     typedef ll::ValueBrick<typename BlockType::ResultType, typename BlockType::ReasonType> ValueBrickType;
 
     ValueBrickType * brick = new ValueBrickType;

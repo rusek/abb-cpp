@@ -3,12 +3,14 @@
 
 #include <abb/blockFwd.h>
 
+#include <abb/ll/valueTraits.h>
+
 #include <abb/utils/alternative.h>
 
 namespace abb {
 
 template<typename BlockT = void, typename... ArgsT>
-typename utils::Alternative<BlockT, Block<void(typename std::decay<ArgsT>::type...)>>::Type success(ArgsT &&... args);
+typename utils::Alternative<BlockT, Block<typename ll::ArgsToValue<ArgsT...>::Type>>::Type success(ArgsT &&... args);
 
 } // namespace abb
 

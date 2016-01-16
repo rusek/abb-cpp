@@ -176,6 +176,9 @@ private:
     }
 
     std::unique_ptr<BrickType> brick;
+
+    template<typename FriendResultT, typename FriendReasonT>
+    friend class Block;
 };
 
 template<typename ResultT, typename ReasonT>

@@ -82,7 +82,7 @@ ValueBrick<void(ResultArgsT...), Und>::~ValueBrick() {
 template<typename... ResultArgsT>
 void ValueBrick<void(ResultArgsT...), Und>::setResult(ResultArgsT... args) {
     ABB_ASSERT(this->state == internal::NEW_STATE, "Already got value");
-    this->result.init(std::move(args)...);
+    this->result.init(std::forward<ResultArgsT>(args)...);
     this->state = internal::SUCCESS_STATE;
     if (this->successor) {
         Island::current().enqueue(std::bind(&ValueBrick::complete, this));
@@ -137,8 +137,8 @@ ValueBrick<Und, void(ReasonArgsT...)>::~ValueBrick() {
 
 template<typename... ReasonArgsT>
 void ValueBrick<Und, void(ReasonArgsT...)>::setReason(ReasonArgsT... args) {
-    ABB_ASSERT(!this->state == internal::NEW_STATE, "Already got value");
-    this->reason.init(std::move(args)...);
+    ABB_ASSERT(this->state == internal::NEW_STATE, "Already got value");
+    this->reason.init(std::forward<ReasonArgsT>(args)...);
     this->state = internal::ERROR_STATE;
     if (this->successor) {
         Island::current().enqueue(std::bind(&ValueBrick::complete, this));
@@ -204,7 +204,7 @@ ValueBrick<void(ResultArgsT...), void(ReasonArgsT...)>::~ValueBrick() {
 template<typename... ResultArgsT, typename... ReasonArgsT>
 void ValueBrick<void(ResultArgsT...), void(ReasonArgsT...)>::setResult(ResultArgsT... args) {
     ABB_ASSERT(this->state == internal::NEW_STATE, "Already got value");
-    this->value.result.init(std::move(args)...);
+    this->value.result.init(std::forward<ResultArgsT>(args)...);
     this->state = internal::SUCCESS_STATE;
     if (this->successor) {
         Island::current().enqueue(std::bind(&ValueBrick::complete, this));
@@ -214,7 +214,7 @@ void ValueBrick<void(ResultArgsT...), void(ReasonArgsT...)>::setResult(ResultArg
 template<typename... ResultArgsT, typename... ReasonArgsT>
 void ValueBrick<void(ResultArgsT...), void(ReasonArgsT...)>::setReason(ReasonArgsT... args) {
     ABB_ASSERT(this->state == internal::NEW_STATE, "Already got value");
-    this->value.reason.init(std::move(args)...);
+    this->value.reason.init(std::forward<ReasonArgsT>(args)...);
     this->state = internal::ERROR_STATE;
     if (this->successor) {
         Island::current().enqueue(std::bind(&ValueBrick::complete, this));

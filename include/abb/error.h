@@ -11,8 +11,8 @@
 namespace abb {
 
 template<typename BlockT = void, typename... ArgsT>
-typename utils::Alternative<BlockT, Block<Und, void(typename std::decay<ArgsT>::type...)>>::Type error(ArgsT &&... args) {
-    typedef typename utils::Alternative<BlockT, Block<Und, void(typename std::decay<ArgsT>::type...)>>::Type BlockType;
+typename utils::Alternative<BlockT, Block<Und, typename ll::ArgsToValue<ArgsT...>::Type>>::Type error(ArgsT &&... args) {
+    typedef typename utils::Alternative<BlockT, Block<Und, typename ll::ArgsToValue<ArgsT...>::Type>>::Type BlockType;
     typedef ll::ValueBrick<typename BlockType::ResultType, typename BlockType::ReasonType> ValueBrickType;
 
     ValueBrickType * brick = new ValueBrickType;

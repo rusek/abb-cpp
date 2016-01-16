@@ -29,8 +29,9 @@ class PipeBrick {};
 
 template<typename... ResultArgsT, typename SuccessContT>
 class PipeBrick<void(ResultArgsT...), Und, SuccessContT, Und> :
-        public internal::ContReturn<SuccessContT, ResultArgsT...>::BrickType,
-        private Successor<void(ResultArgsT...), Und> {
+    public internal::ContReturn<SuccessContT, ResultArgsT...>::BrickType,
+    private Successor<void(ResultArgsT...), Und>
+{
 private:
     typedef Brick<void(ResultArgsT...), Und> InBrickType;
     typedef typename internal::ContReturn<SuccessContT, ResultArgsT...>::BrickType BrickType;
@@ -51,7 +52,7 @@ private:
 
 template<typename... ResultArgsT, typename SuccessContT>
 void PipeBrick<void(ResultArgsT...), Und, SuccessContT, Und>::onsuccess(ResultArgsT... args) {
-    this->proxyBrick.setBrick(this->successCont(std::move(args)...));
+    this->proxyBrick.setBrick(this->successCont(std::forward<ResultArgsT>(args)...));
 }
 
 template<typename... ResultArgsT, typename SuccessContT>
@@ -74,8 +75,9 @@ void PipeBrick<void(ResultArgsT...), Und, SuccessContT, Und>::setSuccessor(Succe
 
 template<typename... ReasonArgsT, typename ErrorContT>
 class PipeBrick<Und, void(ReasonArgsT...), Und, ErrorContT> :
-        public internal::ContReturn<ErrorContT, ReasonArgsT...>::BrickType,
-        private Successor<Und, void(ReasonArgsT...)> {
+    public internal::ContReturn<ErrorContT, ReasonArgsT...>::BrickType,
+    private Successor<Und, void(ReasonArgsT...)>
+{
 private:
     typedef Brick<Und, void(ReasonArgsT...)> InBrickType;
     typedef typename internal::ContReturn<ErrorContT, ReasonArgsT...>::BrickType BrickType;
@@ -96,7 +98,7 @@ private:
 
 template<typename... ReasonArgsT, typename ErrorContT>
 void PipeBrick<Und, void(ReasonArgsT...), Und, ErrorContT>::onerror(ReasonArgsT... args) {
-    this->proxyBrick.setBrick(this->errorCont(std::move(args)...));
+    this->proxyBrick.setBrick(this->errorCont(std::forward<ReasonArgsT>(args)...));
 }
 
 template<typename... ReasonArgsT, typename ErrorContT>
@@ -105,8 +107,9 @@ PipeBrick<Und, void(ReasonArgsT...), Und, ErrorContT>::PipeBrick(
     Und,
     ErrorContT errorCont
 ):
-        inBrick(std::move(inBrick)),
-        errorCont(std::move(errorCont)) {
+    inBrick(std::move(inBrick)),
+    errorCont(std::move(errorCont)
+) {
     this->inBrick->setSuccessor(*this);
 }
 
@@ -118,8 +121,9 @@ void PipeBrick<Und, void(ReasonArgsT...), Und, ErrorContT>::setSuccessor(Success
 
 template<typename... ResultArgsT, typename... ReasonArgsT, typename SuccessContT, typename ErrorContT>
 class PipeBrick<void(ResultArgsT...), void(ReasonArgsT...), SuccessContT, ErrorContT> :
-        public internal::ContReturn<SuccessContT, ResultArgsT...>::BrickType,
-        private Successor<void(ResultArgsT...), void(ReasonArgsT...)> {
+    public internal::ContReturn<SuccessContT, ResultArgsT...>::BrickType,
+    private Successor<void(ResultArgsT...), void(ReasonArgsT...)>
+{
 private:
     typedef Brick<void(ResultArgsT...), void(ReasonArgsT...)> InBrickType;
     typedef internal::ContReturn<SuccessContT, ResultArgsT...> SuccessReturn;
@@ -152,12 +156,12 @@ private:
 
 template<typename... ResultArgsT, typename... ReasonArgsT, typename SuccessContT, typename ErrorContT>
 void PipeBrick<void(ResultArgsT...), void(ReasonArgsT...), SuccessContT, ErrorContT>::onsuccess(ResultArgsT... args) {
-    this->proxyBrick.setBrick(this->successCont(std::move(args)...));
+    this->proxyBrick.setBrick(this->successCont(std::forward<ResultArgsT...>(args)...));
 }
 
 template<typename... ResultArgsT, typename... ReasonArgsT, typename SuccessContT, typename ErrorContT>
 void PipeBrick<void(ResultArgsT...), void(ReasonArgsT...), SuccessContT, ErrorContT>::onerror(ReasonArgsT... args) {
-    this->proxyBrick.setBrick(this->errorCont(std::move(args)...));
+    this->proxyBrick.setBrick(this->errorCont(std::forward<ReasonArgsT>(args)...));
 }
 
 template<typename... ResultArgsT, typename... ReasonArgsT, typename SuccessContT, typename ErrorContT>

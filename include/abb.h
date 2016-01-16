@@ -9,6 +9,8 @@
 
 namespace abb {
 
+typedef Block<void()> VoidBlock;
+
 template<typename Result>
 class Answer {};
 
