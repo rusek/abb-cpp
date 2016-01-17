@@ -14,8 +14,6 @@ namespace internal {
 template<typename ResultT, typename ReasonT>
 class ProxyBrickBase : public Brick<ResultT, ReasonT> {
 public:
-    typedef Brick<ResultT, ReasonT> BrickType;
-
     ProxyBrickBase();
 
     virtual ~ProxyBrickBase();

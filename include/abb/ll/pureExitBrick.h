@@ -12,8 +12,6 @@ namespace ll {
 template<typename ResultT, typename ReasonT>
 class PureExitBrick : public Brick<ResultT, ReasonT>, private Successor {
 public:
-    typedef Brick<ResultT, ReasonT> BrickType;
-
     PureExitBrick(std::function<void()> onexit, BrickPtr<ResultT, ReasonT> brick);
 
     virtual ~PureExitBrick();

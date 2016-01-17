@@ -70,7 +70,6 @@ using ValueToVault = typename ValueVaultImpl<ResultT, ReasonT>::Type;
 template<typename ResultT, typename ReasonT>
 class ValueBrickBase : public Brick<ResultT, ReasonT> {
 public:
-    typedef Brick<ResultT, ReasonT> BrickType;
     typedef ResultT ResultType;
     typedef ReasonT ReasonType;
 

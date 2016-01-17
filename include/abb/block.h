@@ -116,7 +116,6 @@ public:
     typedef BaseBlock<ResultType, ReasonType> BlockType;
 
 private:
-    typedef ll::Brick<ResultType, ReasonType> BrickType;
     typedef ll::BrickPtr<ResultType, ReasonType> BrickPtrType;
 
 public:

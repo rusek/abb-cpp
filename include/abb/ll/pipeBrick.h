@@ -18,23 +18,25 @@ struct ContBrickImpl {};
 
 template<typename ContT, typename... ArgsT>
 struct ContBrickImpl<ContT, void(ArgsT...)> {
-    typedef typename utils::CallReturn<ContT, ArgsT...>::BrickType Type;
+    typedef typename utils::CallReturn<ContT, ArgsT...> Type;
 };
 
 template<typename ContT, typename ValueT>
-using ContBrick = typename ContBrickImpl<ContT, ValueT>::Type;
+using ContBrickPtr = typename ContBrickImpl<ContT, ValueT>::Type;
+
+template<typename ContT, typename ValueT>
+using ContBrick = Brick<typename ContBrickPtr<ContT, ValueT>::ResultType, typename ContBrickPtr<ContT, ValueT>::ReasonType>;
 
 } // namespace internal
 
 template<typename ResultT, typename ReasonT, typename SuccessContT, typename ErrorContT>
 class PipeBrick : public internal::ContBrick<SuccessContT, ResultT>, private Successor {
 private:
-    typedef Brick<ResultT, ReasonT> InBrickType;
     typedef BrickPtr<ResultT, ReasonT> InBrickPtrType;
-    typedef internal::ContBrick<SuccessContT, ResultT> BrickType;
-    typedef internal::ContBrick<ErrorContT, ReasonT> ErrorBrickType;
+    typedef internal::ContBrickPtr<SuccessContT, ResultT> BrickPtrType;
+    typedef internal::ContBrickPtr<ErrorContT, ReasonT> ErrorBrickPtrType;
     static_assert(
-        std::is_same<BrickType, ErrorBrickType>::value,
+        std::is_same<BrickPtrType, ErrorBrickPtrType>::value,
         "Continuations should return same brick type"
     );
 
@@ -57,7 +59,7 @@ private:
     InBrickPtrType inBrick;
     SuccessContT successCont;
     ErrorContT errorCont;
-    ProxyBrick<typename BrickType::ResultType, typename BrickType::ReasonType> proxyBrick;
+    ProxyBrick<typename BrickPtrType::ResultType, typename BrickPtrType::ReasonType> proxyBrick;
 };
 
 template<typename ResultT, typename ReasonT, typename SuccessContT, typename ErrorContT>
@@ -114,9 +116,8 @@ class PipeBrick<ResultT, Und, SuccessContT, Und> :
     private Successor
 {
 private:
-    typedef Brick<ResultT, Und> InBrickType;
     typedef BrickPtr<ResultT, Und> InBrickPtrType;
-    typedef internal::ContBrick<SuccessContT, ResultT> BrickType;
+    typedef internal::ContBrickPtr<SuccessContT, ResultT> BrickPtrType;
 
 public:
     PipeBrick(InBrickPtrType inBrick, SuccessContT successCont, Und);
@@ -130,7 +131,7 @@ private:
 
     InBrickPtrType inBrick;
     SuccessContT successCont;
-    ProxyBrick<typename BrickType::ResultType, typename BrickType::ReasonType> proxyBrick;
+    ProxyBrick<typename BrickPtrType::ResultType, typename BrickPtrType::ReasonType> proxyBrick;
 };
 
 template<typename ResultT, typename SuccessContT>
@@ -172,9 +173,8 @@ class PipeBrick<Und, ReasonT, Und, ErrorContT> :
     private Successor
 {
 private:
-    typedef Brick<Und, ReasonT> InBrickType;
     typedef BrickPtr<Und, ReasonT> InBrickPtrType;
-    typedef internal::ContBrick<ErrorContT, ReasonT> BrickType;
+    typedef internal::ContBrickPtr<ErrorContT, ReasonT> BrickPtrType;
 
 public:
     PipeBrick(InBrickPtrType inBrick, Und successCont, ErrorContT errorCont);
@@ -188,7 +188,7 @@ private:
 
     InBrickPtrType inBrick;
     ErrorContT errorCont;
-    ProxyBrick<typename BrickType::ResultType, typename BrickType::ReasonType> proxyBrick;
+    ProxyBrick<typename BrickPtrType::ResultType, typename BrickPtrType::ReasonType> proxyBrick;
 };
 
 template<typename ReasonT, typename ErrorContT>
