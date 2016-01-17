@@ -1,5 +1,5 @@
-#ifndef ABB_UTILS_VAULT_H
-#define ABB_UTILS_VAULT_H
+#ifndef ABB_UTILS_BANK_H
+#define ABB_UTILS_BANK_H
 
 #include <type_traits>
 
@@ -7,7 +7,7 @@ namespace abb {
 namespace utils {
 
 template<typename ValueT>
-class Vault {
+class Bank {
 public:
     template<typename... ArgsT>
     void init(ArgsT &&... args) {
@@ -29,4 +29,4 @@ private:
 } // namespace utils
 } // namespace abb
 
-#endif // ABB_UTILS_VAULT_H
+#endif // ABB_UTILS_BANK_H

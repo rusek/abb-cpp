@@ -7,7 +7,7 @@
 
 #include <abb/utils/debug.h>
 #include <abb/utils/call.h>
-#include <abb/utils/vault.h>
+#include <abb/utils/bank.h>
 
 #include <tuple>
 
@@ -26,7 +26,7 @@ enum StateFlags {
 };
 
 template<typename ResultT, typename ReasonT>
-struct ValueVaultImpl {
+struct ValueBankImpl {
     union Type {
         void destroy(bool success) {
             if (success) {
@@ -36,35 +36,35 @@ struct ValueVaultImpl {
             }
         }
 
-        utils::Vault<ValueToTuple<ResultT>> result;
-        utils::Vault<ValueToTuple<ReasonT>> reason;
+        utils::Bank<ValueToTuple<ResultT>> result;
+        utils::Bank<ValueToTuple<ReasonT>> reason;
     };
 };
 
 template<typename ResultT>
-struct ValueVaultImpl<ResultT, Und> {
+struct ValueBankImpl<ResultT, Und> {
     struct Type {
         void destroy(bool) {
             this->result.destroy();
         }
 
-        utils::Vault<ValueToTuple<ResultT>> result;
+        utils::Bank<ValueToTuple<ResultT>> result;
     };
 };
 
 template<typename ReasonT>
-struct ValueVaultImpl<Und, ReasonT> {
+struct ValueBankImpl<Und, ReasonT> {
     struct Type {
         void destroy(bool) {
             this->reason.destroy();
         }
 
-        utils::Vault<ValueToTuple<ReasonT>> reason;
+        utils::Bank<ValueToTuple<ReasonT>> reason;
     };
 };
 
 template<typename ResultT, typename ReasonT>
-using ValueToVault = typename ValueVaultImpl<ResultT, ReasonT>::Type;
+using ValueToBank = typename ValueBankImpl<ResultT, ReasonT>::Type;
 
 } // namespace internal
 
@@ -107,7 +107,7 @@ public:
 protected:
     void complete();
 
-    internal::ValueToVault<ResultType, ReasonType> value;
+    internal::ValueToBank<ResultType, ReasonType> value;
     internal::State state;
     Successor * successor;
 };
