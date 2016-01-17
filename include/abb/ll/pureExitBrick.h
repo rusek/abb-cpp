@@ -16,9 +16,9 @@ public:
 
     virtual ~PureExitBrick();
 
-    virtual void setSuccessor(Successor & successor);
-    virtual bool hasResult() const;
-    virtual ValueToTuple<ResultT> & getResult();
+    void setSuccessor(Successor & successor);
+    bool hasResult() const;
+    ValueToTuple<ResultT> & getResult();
 
 private:
     virtual void oncomplete();

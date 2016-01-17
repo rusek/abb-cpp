@@ -75,9 +75,9 @@ public:
 
     ValueBrickBase();
 
-    virtual ~ValueBrickBase();
+    ~ValueBrickBase();
 
-    virtual void setSuccessor(Successor & successor);
+    void setSuccessor(Successor & successor);
 
 protected:
     void complete();
@@ -123,8 +123,8 @@ class ValueBrickSuccess<void(ResultArgsT...), ReasonT> : public ValueBrickBase<v
 public:
     void setResult(ResultArgsT... args);
 
-    virtual bool hasResult() const;
-    virtual std::tuple<ResultArgsT...> & getResult();
+    bool hasResult() const;
+    std::tuple<ResultArgsT...> & getResult();
 };
 
 template<typename... ResultArgsT, typename ReasonT>
@@ -159,8 +159,8 @@ class ValueBrickError<ResultT, void(ReasonArgsT...)> : public ValueBrickSuccess<
 public:
     void setReason(ReasonArgsT... args);
 
-    virtual bool hasReason() const;
-    virtual std::tuple<ReasonArgsT...> & getReason();
+    bool hasReason() const;
+    std::tuple<ReasonArgsT...> & getReason();
 };
 
 template<typename ResultT, typename... ReasonArgsT>
