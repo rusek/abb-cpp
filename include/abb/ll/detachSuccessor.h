@@ -12,54 +12,29 @@ namespace abb {
 namespace ll {
 
 template<typename ResultT, typename ReasonT>
-class DetachSuccessor {};
-
-template<typename... ArgsT>
-class DetachSuccessor<void(ArgsT...), Und> : public Successor<void(ArgsT...), Und> {
+class DetachSuccessor : private Successor {
 public:
-    DetachSuccessor(std::unique_ptr<ll::Brick<void(ArgsT...), Und>> brick): brick(std::move(brick)) {
-        this->brick->setSuccessor(*this);
-    }
+    DetachSuccessor(std::unique_ptr<ll::Brick<ResultT, ReasonT>> brick);
 
-    virtual void onsuccess(ArgsT...) {
-        delete this;
-    }
 private:
-    std::unique_ptr<Brick<void(ArgsT...), Und>> brick;
+    virtual void oncomplete();
+
+    std::unique_ptr<ll::Brick<ResultT, ReasonT>> brick;
 };
 
-template<typename... ArgsT>
-class DetachSuccessor<Und, void(ArgsT...)> : public Successor<Und, void(ArgsT...)> {
-public:
-    DetachSuccessor(std::unique_ptr<Brick<Und, void(ArgsT...)>> brick): brick(std::move(brick)) {
-        this->brick->setSuccessor(*this);
-    }
+template<typename ResultT, typename ReasonT>
+DetachSuccessor<ResultT, ReasonT>::DetachSuccessor(
+    std::unique_ptr<ll::Brick<ResultT, ReasonT>> brick
+):
+    brick(std::move(brick))
+{
+    this->brick->setSuccessor(*this);
+}
 
-    virtual void onerror(ArgsT...) {
-        delete this;
-    }
-private:
-    std::unique_ptr<Brick<Und, void(ArgsT...)>> brick;
-};
-
-template<typename... ResultArgsT, typename... ReasonArgsT>
-class DetachSuccessor<void(ResultArgsT...), void(ReasonArgsT...)> : public Successor<void(ResultArgsT...), void(ReasonArgsT...)> {
-public:
-    DetachSuccessor(std::unique_ptr<Brick<void(ResultArgsT...), void(ReasonArgsT...)>> brick): brick(std::move(brick)) {
-        this->brick->setSuccessor(*this);
-    }
-
-    virtual void onsuccess(ResultArgsT...) {
-        delete this;
-    }
-
-    virtual void onerror(ReasonArgsT...) {
-        delete this;
-    }
-private:
-    std::unique_ptr<Brick<void(ResultArgsT...), void(ReasonArgsT...)>> brick;
-};
-
+template<typename ResultT, typename ReasonT>
+void DetachSuccessor<ResultT, ReasonT>::oncomplete() {
+    delete this;
+}
 
 } // namespace ll
 } // namespace abb

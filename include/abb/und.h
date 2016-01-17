@@ -1,6 +1,8 @@
 #ifndef ABB_UND_H
 #define ABB_UND_H
 
+#include <type_traits>
+
 namespace abb {
 
 class Und {};

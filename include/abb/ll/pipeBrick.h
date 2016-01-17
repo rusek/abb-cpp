@@ -4,6 +4,7 @@
 #include <abb/ll/proxyBrick.h>
 
 #include <abb/utils/callReturn.h>
+#include <abb/utils/call.h>
 
 #include <type_traits>
 
@@ -22,118 +23,27 @@ public:
     typedef Brick<ResultType, ReasonType> BrickType;
 };
 
+template<typename ContT, typename ValueT>
+struct ContReturn2 {};
+
+template<typename ContT, typename... ArgsT>
+struct ContReturn2<ContT, void(ArgsT...)> : ContReturn<ContT, ArgsT...> {};
+
+template<typename ContT, typename ValueT>
+using ContBrick = typename ContReturn2<ContT, ValueT>::BrickType;
+
 } // namespace internal
 
 template<typename ResultT, typename ReasonT, typename SuccessContT, typename ErrorContT>
-class PipeBrick {};
-
-template<typename... ResultArgsT, typename SuccessContT>
-class PipeBrick<void(ResultArgsT...), Und, SuccessContT, Und> :
-    public internal::ContReturn<SuccessContT, ResultArgsT...>::BrickType,
-    private Successor<void(ResultArgsT...), Und>
-{
+class PipeBrick : public internal::ContBrick<SuccessContT, ResultT>, private Successor {
 private:
-    typedef Brick<void(ResultArgsT...), Und> InBrickType;
-    typedef typename internal::ContReturn<SuccessContT, ResultArgsT...>::BrickType BrickType;
-    typedef typename BrickType::SuccessorType SuccessorType;
-
-public:
-    PipeBrick(std::unique_ptr<InBrickType> inBrick, SuccessContT successCont, Und);
-
-    virtual void setSuccessor(SuccessorType & successor);
-
-private:
-    virtual void onsuccess(ResultArgsT...);
-
-    std::unique_ptr<InBrickType> inBrick;
-    SuccessContT successCont;
-    ProxyBrick<typename BrickType::ResultType, typename BrickType::ReasonType> proxyBrick;
-};
-
-template<typename... ResultArgsT, typename SuccessContT>
-void PipeBrick<void(ResultArgsT...), Und, SuccessContT, Und>::onsuccess(ResultArgsT... args) {
-    this->proxyBrick.setBrick(this->successCont(std::forward<ResultArgsT>(args)...));
-}
-
-template<typename... ResultArgsT, typename SuccessContT>
-PipeBrick<void(ResultArgsT...), Und, SuccessContT, Und>::PipeBrick(
-    std::unique_ptr<InBrickType> inBrick,
-    SuccessContT successCont,
-    Und
-):
-    inBrick(std::move(inBrick)),
-    successCont(std::move(successCont))
-{
-    this->inBrick->setSuccessor(*this);
-}
-
-template<typename... ResultArgsT, typename SuccessContT>
-void PipeBrick<void(ResultArgsT...), Und, SuccessContT, Und>::setSuccessor(SuccessorType & successor) {
-    this->proxyBrick.setSuccessor(successor);
-}
-
-
-template<typename... ReasonArgsT, typename ErrorContT>
-class PipeBrick<Und, void(ReasonArgsT...), Und, ErrorContT> :
-    public internal::ContReturn<ErrorContT, ReasonArgsT...>::BrickType,
-    private Successor<Und, void(ReasonArgsT...)>
-{
-private:
-    typedef Brick<Und, void(ReasonArgsT...)> InBrickType;
-    typedef typename internal::ContReturn<ErrorContT, ReasonArgsT...>::BrickType BrickType;
-    typedef typename BrickType::SuccessorType SuccessorType;
-
-public:
-    PipeBrick(std::unique_ptr<InBrickType> inBrick, Und successCont, ErrorContT errorCont);
-
-    virtual void setSuccessor(SuccessorType & successor);
-
-private:
-    virtual void onerror(ReasonArgsT...);
-
-    std::unique_ptr<InBrickType> inBrick;
-    ErrorContT errorCont;
-    ProxyBrick<typename BrickType::ResultType, typename BrickType::ReasonType> proxyBrick;
-};
-
-template<typename... ReasonArgsT, typename ErrorContT>
-void PipeBrick<Und, void(ReasonArgsT...), Und, ErrorContT>::onerror(ReasonArgsT... args) {
-    this->proxyBrick.setBrick(this->errorCont(std::forward<ReasonArgsT>(args)...));
-}
-
-template<typename... ReasonArgsT, typename ErrorContT>
-PipeBrick<Und, void(ReasonArgsT...), Und, ErrorContT>::PipeBrick(
-    std::unique_ptr<InBrickType> inBrick,
-    Und,
-    ErrorContT errorCont
-):
-    inBrick(std::move(inBrick)),
-    errorCont(std::move(errorCont)
-) {
-    this->inBrick->setSuccessor(*this);
-}
-
-template<typename... ReasonArgsT, typename ErrorContT>
-void PipeBrick<Und, void(ReasonArgsT...), Und, ErrorContT>::setSuccessor(SuccessorType & successor) {
-    this->proxyBrick.setSuccessor(successor);
-}
-
-
-template<typename... ResultArgsT, typename... ReasonArgsT, typename SuccessContT, typename ErrorContT>
-class PipeBrick<void(ResultArgsT...), void(ReasonArgsT...), SuccessContT, ErrorContT> :
-    public internal::ContReturn<SuccessContT, ResultArgsT...>::BrickType,
-    private Successor<void(ResultArgsT...), void(ReasonArgsT...)>
-{
-private:
-    typedef Brick<void(ResultArgsT...), void(ReasonArgsT...)> InBrickType;
-    typedef internal::ContReturn<SuccessContT, ResultArgsT...> SuccessReturn;
-    typedef internal::ContReturn<ErrorContT, ReasonArgsT...> ErrorReturn;
+    typedef Brick<ResultT, ReasonT> InBrickType;
+    typedef internal::ContBrick<SuccessContT, ResultT> BrickType;
+    typedef internal::ContBrick<ErrorContT, ReasonT> ErrorBrickType;
     static_assert(
-        std::is_same<typename SuccessReturn::BrickType, typename ErrorReturn::BrickType>::value,
+        std::is_same<BrickType, ErrorBrickType>::value,
         "Continuations should return same brick type"
     );
-    typedef typename SuccessReturn::BrickType BrickType;
-    typedef typename BrickType::SuccessorType SuccessorType;
 
 public:
     PipeBrick(
@@ -142,11 +52,14 @@ public:
         ErrorContT errorCont
     );
 
-    virtual void setSuccessor(SuccessorType & successor);
+    virtual void setSuccessor(Successor & successor);
+    virtual bool hasResult() const;
+    virtual ValueToTuple<ResultT> & getResult();
+    virtual bool hasReason() const;
+    virtual ValueToTuple<ReasonT> & getReason();
 
 private:
-    virtual void onsuccess(ResultArgsT...);
-    virtual void onerror(ReasonArgsT...);
+    virtual void oncomplete();
 
     std::unique_ptr<InBrickType> inBrick;
     SuccessContT successCont;
@@ -154,18 +67,8 @@ private:
     ProxyBrick<typename BrickType::ResultType, typename BrickType::ReasonType> proxyBrick;
 };
 
-template<typename... ResultArgsT, typename... ReasonArgsT, typename SuccessContT, typename ErrorContT>
-void PipeBrick<void(ResultArgsT...), void(ReasonArgsT...), SuccessContT, ErrorContT>::onsuccess(ResultArgsT... args) {
-    this->proxyBrick.setBrick(this->successCont(std::forward<ResultArgsT...>(args)...));
-}
-
-template<typename... ResultArgsT, typename... ReasonArgsT, typename SuccessContT, typename ErrorContT>
-void PipeBrick<void(ResultArgsT...), void(ReasonArgsT...), SuccessContT, ErrorContT>::onerror(ReasonArgsT... args) {
-    this->proxyBrick.setBrick(this->errorCont(std::forward<ReasonArgsT>(args)...));
-}
-
-template<typename... ResultArgsT, typename... ReasonArgsT, typename SuccessContT, typename ErrorContT>
-PipeBrick<void(ResultArgsT...), void(ReasonArgsT...), SuccessContT, ErrorContT>::PipeBrick(
+template<typename ResultT, typename ReasonT, typename SuccessContT, typename ErrorContT>
+PipeBrick<ResultT, ReasonT, SuccessContT, ErrorContT>::PipeBrick(
     std::unique_ptr<InBrickType> inBrick,
     SuccessContT successCont,
     ErrorContT errorCont
@@ -177,10 +80,154 @@ PipeBrick<void(ResultArgsT...), void(ReasonArgsT...), SuccessContT, ErrorContT>:
     this->inBrick->setSuccessor(*this);
 }
 
-template<typename... ResultArgsT, typename... ReasonArgsT, typename SuccessContT, typename ErrorContT>
-void PipeBrick<void(ResultArgsT...), void(ReasonArgsT...), SuccessContT, ErrorContT>::setSuccessor(SuccessorType & successor) {
+template<typename ResultT, typename ReasonT, typename SuccessContT, typename ErrorContT>
+void PipeBrick<ResultT, ReasonT, SuccessContT, ErrorContT>::oncomplete() {
+    if (this->inBrick->hasResult()) {
+        this->proxyBrick.setBrick(utils::call(this->successCont, std::move(this->inBrick->getResult())));
+    } else {
+        this->proxyBrick.setBrick(utils::call(this->errorCont, std::move(this->inBrick->getReason())));
+    }
+}
+
+template<typename ResultT, typename ReasonT, typename SuccessContT, typename ErrorContT>
+void PipeBrick<ResultT, ReasonT, SuccessContT, ErrorContT>::setSuccessor(Successor & successor) {
     this->proxyBrick.setSuccessor(successor);
 }
+
+template<typename ResultT, typename ReasonT, typename SuccessContT, typename ErrorContT>
+bool PipeBrick<ResultT, ReasonT, SuccessContT, ErrorContT>::hasResult() const {
+    return this->proxyBrick.hasResult();
+}
+
+template<typename ResultT, typename ReasonT, typename SuccessContT, typename ErrorContT>
+ValueToTuple<ResultT> & PipeBrick<ResultT, ReasonT, SuccessContT, ErrorContT>::getResult() {
+    return this->proxyBrick.getResult();
+}
+
+template<typename ResultT, typename ReasonT, typename SuccessContT, typename ErrorContT>
+bool PipeBrick<ResultT, ReasonT, SuccessContT, ErrorContT>::hasReason() const {
+    return this->proxyBrick.hasReason();
+}
+
+template<typename ResultT, typename ReasonT, typename SuccessContT, typename ErrorContT>
+ValueToTuple<ReasonT> & PipeBrick<ResultT, ReasonT, SuccessContT, ErrorContT>::getReason() {
+    return this->proxyBrick.getReason();
+}
+
+
+template<typename ResultT, typename SuccessContT>
+class PipeBrick<ResultT, Und, SuccessContT, Und> :
+    public internal::ContBrick<SuccessContT, ResultT>,
+    private Successor
+{
+private:
+    typedef Brick<ResultT, Und> InBrickType;
+    typedef internal::ContBrick<SuccessContT, ResultT> BrickType;
+
+public:
+    PipeBrick(std::unique_ptr<InBrickType> inBrick, SuccessContT successCont, Und);
+
+    virtual void setSuccessor(Successor & successor);
+    virtual bool hasResult() const;
+    virtual ValueToTuple<ResultT> & getResult();
+
+private:
+    virtual void oncomplete();
+
+    std::unique_ptr<InBrickType> inBrick;
+    SuccessContT successCont;
+    ProxyBrick<typename BrickType::ResultType, typename BrickType::ReasonType> proxyBrick;
+};
+
+template<typename ResultT, typename SuccessContT>
+void PipeBrick<ResultT, Und, SuccessContT, Und>::oncomplete() {
+    this->proxyBrick.setBrick(utils::call(this->successCont, std::move(this->inBrick->getResult())));
+}
+
+template<typename ResultT, typename SuccessContT>
+PipeBrick<ResultT, Und, SuccessContT, Und>::PipeBrick(
+    std::unique_ptr<InBrickType> inBrick,
+    SuccessContT successCont,
+    Und
+):
+    inBrick(std::move(inBrick)),
+    successCont(std::move(successCont))
+{
+    this->inBrick->setSuccessor(*this);
+}
+
+template<typename ResultT, typename SuccessContT>
+void PipeBrick<ResultT, Und, SuccessContT, Und>::setSuccessor(Successor & successor) {
+    this->proxyBrick.setSuccessor(successor);
+}
+
+template<typename ResultT, typename SuccessContT>
+bool PipeBrick<ResultT, Und, SuccessContT, Und>::hasResult() const {
+    return this->proxyBrick.hasResult();
+}
+
+template<typename ResultT, typename SuccessContT>
+ValueToTuple<ResultT> & PipeBrick<ResultT, Und, SuccessContT, Und>::getResult() {
+    return this->proxyBrick.getResult();
+}
+
+
+template<typename ReasonT, typename ErrorContT>
+class PipeBrick<Und, ReasonT, Und, ErrorContT> :
+    public internal::ContBrick<ErrorContT, ReasonT>,
+    private Successor
+{
+private:
+    typedef Brick<Und, ReasonT> InBrickType;
+    typedef internal::ContBrick<ErrorContT, ReasonT> BrickType;
+
+public:
+    PipeBrick(std::unique_ptr<InBrickType> inBrick, Und successCont, ErrorContT errorCont);
+
+    virtual void setSuccessor(Successor & successor);
+    virtual bool hasReason() const;
+    virtual ValueToTuple<ReasonT> & getReason();
+
+private:
+    virtual void oncomplete();
+
+    std::unique_ptr<InBrickType> inBrick;
+    ErrorContT errorCont;
+    ProxyBrick<typename BrickType::ResultType, typename BrickType::ReasonType> proxyBrick;
+};
+
+template<typename ReasonT, typename ErrorContT>
+void PipeBrick<Und, ReasonT, Und, ErrorContT>::oncomplete() {
+    this->proxyBrick.setBrick(utils::call(this->errorCont, std::move(this->inBrick->getReason())));
+}
+
+template<typename ReasonT, typename ErrorContT>
+PipeBrick<Und, ReasonT, Und, ErrorContT>::PipeBrick(
+    std::unique_ptr<InBrickType> inBrick,
+    Und,
+    ErrorContT errorCont
+):
+    inBrick(std::move(inBrick)),
+    errorCont(std::move(errorCont)
+) {
+    this->inBrick->setSuccessor(*this);
+}
+
+template<typename ReasonT, typename ErrorContT>
+void PipeBrick<Und, ReasonT, Und, ErrorContT>::setSuccessor(Successor & successor) {
+    this->proxyBrick.setSuccessor(successor);
+}
+
+template<typename ReasonT, typename ErrorContT>
+bool PipeBrick<Und, ReasonT, Und, ErrorContT>::hasReason() const {
+    return this->proxyBrick.hasReason();
+}
+
+template<typename ReasonT, typename ErrorContT>
+ValueToTuple<ReasonT> & PipeBrick<Und, ReasonT, Und, ErrorContT>::getReason() {
+    return this->proxyBrick.getReason();
+}
+
 
 } // namespace ll
 } // namespace abb

@@ -117,7 +117,6 @@ public:
 
 private:
     typedef ll::Brick<ResultType, ReasonType> BrickType;
-    typedef ll::Successor<ResultType, ReasonType> SuccessorType;
 
 public:
     explicit BaseBlock(std::unique_ptr<BrickType> brick);

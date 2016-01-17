@@ -3,53 +3,62 @@
 
 #include <abb/ll/brick.h>
 
+#include <functional>
+#include <memory>
+
 namespace abb {
 namespace ll {
 
 template<typename ResultT, typename ReasonT>
-class PureExitBrick {};
-
-template<typename... ArgsT>
-class PureExitBrick<void(ArgsT...), Und> : public Brick<void(ArgsT...), Und>, private Successor<void(ArgsT...), Und> {
+class PureExitBrick : public Brick<ResultT, ReasonT>, private Successor {
 public:
-    typedef Brick<void(ArgsT...), Und> BrickType;
-    typedef typename BrickType::SuccessorType SuccessorType;
+    typedef Brick<ResultT, ReasonT> BrickType;
 
     PureExitBrick(std::function<void()> onexit, std::unique_ptr<BrickType> brick);
 
     virtual ~PureExitBrick();
 
-    virtual void setSuccessor(SuccessorType & successor);
+    virtual void setSuccessor(Successor & successor);
+    virtual bool hasResult() const;
+    virtual ValueToTuple<ResultT> & getResult();
 
 private:
-    virtual void onsuccess(ArgsT...);
+    virtual void oncomplete();
 
     std::function<void()> onexit;
     std::unique_ptr<BrickType> brick;
-    SuccessorType * successor;
+    Successor * successor;
 };
 
-template<typename... ArgsT>
-PureExitBrick<void(ArgsT...), Und>::PureExitBrick(std::function<void()> onexit, std::unique_ptr<BrickType> brick):
-        onexit(onexit),
-        brick(std::move(brick)),
-        successor(nullptr) {
-}
+template<typename ResultT, typename ReasonT>
+PureExitBrick<ResultT, ReasonT>::PureExitBrick(std::function<void()> onexit, std::unique_ptr<BrickType> brick):
+    onexit(onexit),
+    brick(std::move(brick)),
+    successor(nullptr) {}
 
-template<typename... ArgsT>
-PureExitBrick<void(ArgsT...), Und>::~PureExitBrick() {
-}
+template<typename ResultT, typename ReasonT>
+PureExitBrick<ResultT, ReasonT>::~PureExitBrick() {}
 
-template<typename... ArgsT>
-void PureExitBrick<void(ArgsT...), Und>::setSuccessor(SuccessorType & successor) {
+template<typename ResultT, typename ReasonT>
+void PureExitBrick<ResultT, ReasonT>::setSuccessor(Successor & successor) {
     this->successor = &successor;
     this->brick->setSuccessor(*this); // FIXME too late for that!
 }
 
-template<typename... ArgsT>
-void PureExitBrick<void(ArgsT...), Und>::onsuccess(ArgsT... args) {
+template<typename ResultT, typename ReasonT>
+bool PureExitBrick<ResultT, ReasonT>::hasResult() const {
+    return this->brick->hasResult();
+}
+
+template<typename ResultT, typename ReasonT>
+ValueToTuple<ResultT> & PureExitBrick<ResultT, ReasonT>::getResult() {
+    return this->brick->getResult();
+}
+
+template<typename ResultT, typename ReasonT>
+void PureExitBrick<ResultT, ReasonT>::oncomplete() {
     this->onexit();
-    this->successor->onsuccess(args...);
+    this->successor->oncomplete();
 }
 
 } // namespace ll
