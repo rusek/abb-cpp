@@ -43,7 +43,7 @@ PureExitBrick<void(ArgsT...), Und>::~PureExitBrick() {
 template<typename... ArgsT>
 void PureExitBrick<void(ArgsT...), Und>::setSuccessor(SuccessorType & successor) {
     this->successor = &successor;
-    this->brick->setSuccessor(*this);
+    this->brick->setSuccessor(*this); // FIXME too late for that!
 }
 
 template<typename... ArgsT>

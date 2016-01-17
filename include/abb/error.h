@@ -11,8 +11,8 @@
 namespace abb {
 
 template<typename BlockT, typename... ArgsT>
-internal::ErrorReturnT<BlockT, ArgsT...> error(ArgsT &&... args) {
-    typedef internal::ErrorReturnT<BlockT, ArgsT...> BlockType;
+internal::ErrorReturn<BlockT, ArgsT...> error(ArgsT &&... args) {
+    typedef internal::ErrorReturn<BlockT, ArgsT...> BlockType;
     typedef ll::ValueBrick<typename BlockType::ResultType, typename BlockType::ReasonType> ValueBrickType;
 
     ValueBrickType * brick = new ValueBrickType;

@@ -4,6 +4,8 @@
 namespace abb {
 namespace utils {
 
+namespace internal {
+
 template<typename ArgT, typename... ArgsT>
 struct Alternative {
     typedef ArgT Type;
@@ -12,8 +14,10 @@ struct Alternative {
 template<typename... ArgsT>
 struct Alternative<void, ArgsT...> : Alternative<ArgsT...> {};
 
+} // namespace internal
+
 template<typename... ArgsT>
-using AlternativeT = typename Alternative<ArgsT...>::Type;
+using Alternative = typename internal::Alternative<ArgsT...>::Type;
 
 } // namespace utils
 } // namespace abb

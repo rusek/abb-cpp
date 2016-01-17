@@ -14,7 +14,7 @@
 
 #include <abb/utils/debug.h>
 #include <abb/utils/noncopyable.h>
-#include <abb/utils/callResult.h>
+#include <abb/utils/callReturn.h>
 #include <abb/utils/alternative.h>
 
 #include <functional>
@@ -36,7 +36,7 @@ struct ContTraitsWithReturn {
 };
 
 template<typename ContT, typename... ArgsT>
-struct ContTraits : ContTraitsWithReturn<ContT, typename utils::CallResult<ContT, ArgsT...>::Type, ArgsT...> {};
+struct ContTraits : ContTraitsWithReturn<ContT, utils::CallReturn<ContT, ArgsT...>, ArgsT...> {};
 
 template<typename BlockT, typename SuccessContT, typename ErrorContT>
 struct BlockContTraits {};

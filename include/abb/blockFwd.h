@@ -11,43 +11,43 @@ namespace abb {
 namespace internal {
 
 template<typename ArgT>
-struct NormalizeArg {
+struct NormalizeArgImpl {
     typedef ArgT Type;
 };
 
 template<typename ArgT>
-struct NormalizeArg<std::reference_wrapper<ArgT>> {
+struct NormalizeArgImpl<std::reference_wrapper<ArgT>> {
     typedef ArgT & Type;
 };
 
 template<typename ArgT>
-using NormalizeArgT = typename NormalizeArg<ArgT>::Type;
+using NormalizeArg = typename NormalizeArgImpl<ArgT>::Type;
 
 template<typename ValueT>
-struct NormalizeValue {
-    typedef void Type(NormalizeArgT<ValueT>);
+struct NormalizeValueImpl {
+    typedef void Type(NormalizeArg<ValueT>);
 };
 
 template<>
-struct NormalizeValue<Und> {
+struct NormalizeValueImpl<Und> {
     typedef Und Type;
 };
 
 template<typename ReturnT, typename... ArgsT>
-struct NormalizeValue<ReturnT(ArgsT...)> {};
+struct NormalizeValueImpl<ReturnT(ArgsT...)> {};
 
 template<typename... ArgsT>
-struct NormalizeValue<void(ArgsT...)> {
-    typedef void Type(NormalizeArgT<ArgsT>...);
+struct NormalizeValueImpl<void(ArgsT...)> {
+    typedef void Type(NormalizeArg<ArgsT>...);
 };
 
 template<>
-struct NormalizeValue<void> {
+struct NormalizeValueImpl<void> {
     typedef void Type();
 };
 
 template<typename ValueT>
-using NormalizeValueT = typename NormalizeValue<ValueT>::Type;
+using NormalizeValue = typename NormalizeValueImpl<ValueT>::Type;
 
 } // namespace internal
 
@@ -55,10 +55,7 @@ template<typename ResultT, typename ReasonT>
 class BaseBlock;
 
 template<typename ResultT = Und, typename ReasonT = Und>
-using Block = BaseBlock<internal::NormalizeValueT<ResultT>, internal::NormalizeValueT<ReasonT>>;
-
-template<typename ReasonT>
-using ErrorBlock = Block<Und, ReasonT>;
+using Block = BaseBlock<internal::NormalizeValue<ResultT>, internal::NormalizeValue<ReasonT>>;
 
 } // namespace abb
 

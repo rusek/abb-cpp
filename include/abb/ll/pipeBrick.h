@@ -3,7 +3,7 @@
 
 #include <abb/ll/proxyBrick.h>
 
-#include <abb/utils/callResult.h>
+#include <abb/utils/callReturn.h>
 
 #include <type_traits>
 
@@ -15,7 +15,7 @@ namespace internal {
 template<typename ContT, typename... ArgsT>
 class ContReturn {
 private:
-    typedef typename utils::CallResult<ContT, ArgsT...>::Type::element_type ReturnType;
+    typedef typename utils::CallReturn<ContT, ArgsT...>::element_type ReturnType;
 public:
     typedef typename ReturnType::ResultType ResultType;
     typedef typename ReturnType::ReasonType ReasonType;

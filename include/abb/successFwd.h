@@ -7,20 +7,18 @@
 
 namespace abb {
 
+template<typename... ArgsT>
+using SuccessBlock = Block<void(ArgsT...), Und>;
+
 namespace internal {
 
 template<typename BlockT, typename... ArgsT>
-struct SuccessReturn {
-    typedef utils::AlternativeT<BlockT, Block<void(typename std::decay<ArgsT>::type...)>> Type;
-};
-
-template<typename BlockT, typename... ArgsT>
-using SuccessReturnT = typename SuccessReturn<BlockT, ArgsT...>::Type;
+using SuccessReturn = utils::Alternative<BlockT, SuccessBlock<typename std::decay<ArgsT>::type...>>;
 
 } // namespace internal
 
 template<typename BlockT = void, typename... ArgsT>
-internal::SuccessReturnT<BlockT, ArgsT...> success(ArgsT &&... args);
+internal::SuccessReturn<BlockT, ArgsT...> success(ArgsT &&... args);
 
 } // namespace abb
 

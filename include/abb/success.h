@@ -11,8 +11,8 @@
 namespace abb {
 
 template<typename BlockT, typename... ArgsT>
-internal::SuccessReturnT<BlockT, ArgsT...> success(ArgsT &&... args) {
-    typedef internal::SuccessReturnT<BlockT, ArgsT...> BlockType;
+internal::SuccessReturn<BlockT, ArgsT...> success(ArgsT &&... args) {
+    typedef internal::SuccessReturn<BlockT, ArgsT...> BlockType;
     typedef ll::ValueBrick<typename BlockType::ResultType, typename BlockType::ReasonType> ValueBrickType;
 
     ValueBrickType * brick = new ValueBrickType;
