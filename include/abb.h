@@ -57,7 +57,7 @@ BlockType impl(FuncType func) {
         throw;
     }
 
-    return BlockType(std::unique_ptr<typename ValueBrickType::BrickType>(brick));
+    return BlockType(ll::makeBrickPtr(brick));
 }
 
 template<typename FuncType>

@@ -11,6 +11,7 @@
 #include <abb/ll/successor.h>
 #include <abb/ll/detachSuccessor.h>
 #include <abb/ll/pipeBrick.h>
+#include <abb/ll/brickPtr.h>
 
 #include <abb/utils/debug.h>
 #include <abb/utils/noncopyable.h>
@@ -18,7 +19,6 @@
 #include <abb/utils/alternative.h>
 
 #include <functional>
-#include <memory>
 #include <type_traits>
 
 namespace abb {
@@ -117,9 +117,10 @@ public:
 
 private:
     typedef ll::Brick<ResultType, ReasonType> BrickType;
+    typedef ll::BrickPtr<ResultType, ReasonType> BrickPtrType;
 
 public:
-    explicit BaseBlock(std::unique_ptr<BrickType> brick);
+    explicit BaseBlock(BrickPtrType brick);
     BaseBlock(BlockType &&) = default;
 
     ~BaseBlock() {
@@ -159,7 +160,7 @@ private:
         Unpacker(): cont() {}
 
         template<typename... ArgsT>
-        std::unique_ptr<BrickType> operator()(ArgsT &&... args) {
+        BrickPtrType operator()(ArgsT &&... args) {
             return cont(std::forward<ArgsT>(args)...).takeBrick();
         }
 
@@ -169,19 +170,19 @@ private:
 
     void detach();
 
-    std::unique_ptr<BrickType> takeBrick() {
+    BrickPtrType takeBrick() {
         ABB_ASSERT(this->brick, "Block is empty");
         return std::move(this->brick);
     }
 
-    std::unique_ptr<BrickType> brick;
+    BrickPtrType brick;
 
     template<typename FriendResultT, typename FriendReasonT>
     friend class BaseBlock;
 };
 
 template<typename ResultT, typename ReasonT>
-BaseBlock<ResultT, ReasonT>::BaseBlock(std::unique_ptr<BrickType> brick): brick(std::move(brick)) {}
+BaseBlock<ResultT, ReasonT>::BaseBlock(BrickPtrType brick): brick(std::move(brick)) {}
 
 namespace internal {
 
@@ -234,7 +235,6 @@ auto BaseBlock<ResultT, ReasonT>::pipe(
     typedef typename std::decay<ErrorContT>::type ErrorContD;
     typedef internal::BlockContTraits<BlockType, SuccessContD, ErrorContD> Traits;
     typedef typename Traits::BlockType OutBlockType;
-    typedef typename OutBlockType::BrickType OutBrickType;
     typedef typename std::conditional<
         IsDefined<typename Traits::SuccessContType>::value,
         typename OutBlockType::template Unpacker<typename Traits::SuccessContType>,
@@ -248,21 +248,21 @@ auto BaseBlock<ResultT, ReasonT>::pipe(
     typedef internal::ContBuilder<BrickSuccessContType, SuccessContD, SuccessContT> SuccessContBuilder;
     typedef internal::ContBuilder<BrickErrorContType, ErrorContD, ErrorContT> ErrorContBuilder;
 
-    return OutBlockType(std::unique_ptr<OutBrickType>(new ll::PipeBrick<
+    return OutBlockType(ll::makeBrick<ll::PipeBrick<
         ResultType,
         ReasonType,
         BrickSuccessContType,
         BrickErrorContType
-    >(
+    >>(
         this->takeBrick(),
         SuccessContBuilder::build(std::forward<SuccessContT>(successCont)),
         ErrorContBuilder::build(std::forward<ErrorContT>(errorCont))
-    )));
+    ));
 }
 
 template<typename ResultT, typename ReasonT>
 auto BaseBlock<ResultT, ReasonT>::exit(std::function<void()> func) -> BlockType {
-    return BlockType(std::unique_ptr<BrickType>(new ll::PureExitBrick<ResultType, Und>(func, this->takeBrick())));
+    return BlockType(ll::makeBrick<ll::PureExitBrick<ResultType, Und>>(func, this->takeBrick()));
 }
 
 template<typename ResultT, typename ReasonT>

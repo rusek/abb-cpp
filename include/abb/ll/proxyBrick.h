@@ -2,10 +2,9 @@
 #define ABB_LL_PROXY_BRICK_H
 
 #include <abb/ll/brick.h>
+#include <abb/ll/brickPtr.h>
 
 #include <abb/utils/debug.h>
-
-#include <memory>
 
 namespace abb {
 namespace ll {
@@ -21,12 +20,12 @@ public:
 
     virtual ~ProxyBrickBase();
 
-    void setBrick(std::unique_ptr<BrickType> brick);
+    void setBrick(BrickPtr<ResultT, ReasonT> brick);
 
     virtual void setSuccessor(Successor & successor);
 
 protected:
-    std::unique_ptr<BrickType> brick;
+    BrickPtr<ResultT, ReasonT> brick;
     Successor * successor;
 };
 
@@ -40,11 +39,11 @@ ProxyBrickBase<ResultT, ReasonT>::~ProxyBrickBase() {
 }
 
 template<typename ResultT, typename ReasonT>
-void ProxyBrickBase<ResultT, ReasonT>::setBrick(std::unique_ptr<BrickType> brick) {
+void ProxyBrickBase<ResultT, ReasonT>::setBrick(BrickPtr<ResultT, ReasonT> brick) {
     ABB_ASSERT(!this->brick, "Already got brick");
     this->brick = std::move(brick);
     if (this->successor) {
-        this->brick->setSuccessor(*this->successor);
+        this->brick.setSuccessor(*this->successor);
     }
 }
 
@@ -53,7 +52,7 @@ void ProxyBrickBase<ResultT, ReasonT>::setSuccessor(Successor & successor) {
     ABB_ASSERT(!this->successor, "Already got successor");
     this->successor = &successor;
     if (this->brick) {
-        this->brick->setSuccessor(*this->successor);
+        this->brick.setSuccessor(*this->successor);
     }
 }
 
@@ -66,12 +65,12 @@ public:
 
 template<typename ResultT, typename ReasonT>
 bool ProxyBrickSuccess<ResultT, ReasonT>::hasResult() const {
-    return this->brick && this->brick->hasResult();
+    return this->brick && this->brick.hasResult();
 }
 
 template<typename ResultT, typename ReasonT>
 ValueToTuple<ResultT> & ProxyBrickSuccess<ResultT, ReasonT>::getResult() {
-    return this->brick->getResult();
+    return this->brick.getResult();
 }
 
 template<typename ReasonT>
@@ -87,12 +86,12 @@ public:
 
 template<typename ResultT, typename ReasonT>
 bool ProxyBrickError<ResultT, ReasonT>::hasReason() const {
-    return this->brick && this->brick->hasReason();
+    return this->brick && this->brick.hasReason();
 }
 
 template<typename ResultT, typename ReasonT>
 ValueToTuple<ReasonT> & ProxyBrickError<ResultT, ReasonT>::getReason() {
-    return this->brick->getReason();
+    return this->brick.getReason();
 }
 
 template<typename ResultT>

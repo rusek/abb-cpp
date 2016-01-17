@@ -2,9 +2,9 @@
 #define ABB_LL_PURE_EXIT_BRICK_H
 
 #include <abb/ll/brick.h>
+#include <abb/ll/brickPtr.h>
 
 #include <functional>
-#include <memory>
 
 namespace abb {
 namespace ll {
@@ -14,7 +14,7 @@ class PureExitBrick : public Brick<ResultT, ReasonT>, private Successor {
 public:
     typedef Brick<ResultT, ReasonT> BrickType;
 
-    PureExitBrick(std::function<void()> onexit, std::unique_ptr<BrickType> brick);
+    PureExitBrick(std::function<void()> onexit, BrickPtr<ResultT, ReasonT> brick);
 
     virtual ~PureExitBrick();
 
@@ -26,12 +26,12 @@ private:
     virtual void oncomplete();
 
     std::function<void()> onexit;
-    std::unique_ptr<BrickType> brick;
+    BrickPtr<ResultT, ReasonT> brick;
     Successor * successor;
 };
 
 template<typename ResultT, typename ReasonT>
-PureExitBrick<ResultT, ReasonT>::PureExitBrick(std::function<void()> onexit, std::unique_ptr<BrickType> brick):
+PureExitBrick<ResultT, ReasonT>::PureExitBrick(std::function<void()> onexit, BrickPtr<ResultT, ReasonT> brick):
     onexit(onexit),
     brick(std::move(brick)),
     successor(nullptr) {}
@@ -42,17 +42,17 @@ PureExitBrick<ResultT, ReasonT>::~PureExitBrick() {}
 template<typename ResultT, typename ReasonT>
 void PureExitBrick<ResultT, ReasonT>::setSuccessor(Successor & successor) {
     this->successor = &successor;
-    this->brick->setSuccessor(*this); // FIXME too late for that!
+    this->brick.setSuccessor(*this); // FIXME too late for that!
 }
 
 template<typename ResultT, typename ReasonT>
 bool PureExitBrick<ResultT, ReasonT>::hasResult() const {
-    return this->brick->hasResult();
+    return this->brick.hasResult();
 }
 
 template<typename ResultT, typename ReasonT>
 ValueToTuple<ResultT> & PureExitBrick<ResultT, ReasonT>::getResult() {
-    return this->brick->getResult();
+    return this->brick.getResult();
 }
 
 template<typename ResultT, typename ReasonT>

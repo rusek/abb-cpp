@@ -5,8 +5,7 @@
 #include <abb/blockFwd.h>
 
 #include <abb/ll/valueBrick.h>
-
-#include <memory>
+#include <abb/ll/brickPtr.h>
 
 namespace abb {
 
@@ -22,7 +21,7 @@ internal::ErrorReturn<BlockT, ArgsT...> error(ArgsT &&... args) {
         delete brick;
         throw;
     }
-    return BlockType(std::unique_ptr<typename ValueBrickType::BrickType>(brick));
+    return BlockType(ll::makeBrickPtr(brick));
 }
 
 } // namespace abb

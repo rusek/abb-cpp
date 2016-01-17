@@ -9,7 +9,6 @@
 #include <abb/utils/call.h>
 #include <abb/utils/vault.h>
 
-#include <memory>
 #include <tuple>
 
 namespace abb {

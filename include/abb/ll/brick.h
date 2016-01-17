@@ -20,6 +20,11 @@ struct ValueToTupleImpl<void(ArgsT...)> {
     typedef std::tuple<ArgsT...> Type;
 };
 
+template<>
+struct ValueToTupleImpl<Und> {
+    typedef Und Type;
+};
+
 } // namespace internal
 
 template<typename ValueT>

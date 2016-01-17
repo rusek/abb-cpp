@@ -3,10 +3,9 @@
 
 #include <abb/ll/successor.h>
 #include <abb/ll/brick.h>
+#include <abb/ll/brickPtr.h>
 
 #include <abb/und.h>
-
-#include <memory>
 
 namespace abb {
 namespace ll {
@@ -14,21 +13,21 @@ namespace ll {
 template<typename ResultT, typename ReasonT>
 class DetachSuccessor : private Successor {
 public:
-    DetachSuccessor(std::unique_ptr<ll::Brick<ResultT, ReasonT>> brick);
+    DetachSuccessor(BrickPtr<ResultT, ReasonT> brick);
 
 private:
     virtual void oncomplete();
 
-    std::unique_ptr<ll::Brick<ResultT, ReasonT>> brick;
+    BrickPtr<ResultT, ReasonT> brick;
 };
 
 template<typename ResultT, typename ReasonT>
 DetachSuccessor<ResultT, ReasonT>::DetachSuccessor(
-    std::unique_ptr<ll::Brick<ResultT, ReasonT>> brick
+    BrickPtr<ResultT, ReasonT> brick
 ):
     brick(std::move(brick))
 {
-    this->brick->setSuccessor(*this);
+    this->brick.setSuccessor(*this);
 }
 
 template<typename ResultT, typename ReasonT>
