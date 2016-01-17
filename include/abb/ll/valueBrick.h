@@ -66,128 +66,97 @@ struct ValueVaultImpl<Und, ReasonT> {
 template<typename ResultT, typename ReasonT>
 using ValueToVault = typename ValueVaultImpl<ResultT, ReasonT>::Type;
 
+} // namespace internal
 
 template<typename ResultT, typename ReasonT>
-class ValueBrickBase : public Brick<ResultT, ReasonT> {
+class ValueBrick : public Brick<ResultT, ReasonT> {
 public:
     typedef ResultT ResultType;
     typedef ReasonT ReasonType;
 
-    ValueBrickBase();
+    ValueBrick();
 
-    ~ValueBrickBase();
+    ~ValueBrick();
 
     void setSuccessor(Successor & successor);
+
+    template<typename... ArgsT>
+    void setResult(ArgsT &&... args);
+
+    template<typename... ArgsT>
+    void setReason(ArgsT &&... args);
+
+    bool hasResult() const {
+        return this->state & internal::SUCCESS_STATE;
+    }
+
+    ValueToTuple<ResultT> & getResult() {
+        ABB_ASSERT(this->state & internal::SUCCESS_STATE, "Result is not set");
+        return *this->value.result;
+    }
+
+    bool hasReason() const {
+        return this->state & internal::ERROR_STATE;
+    }
+
+    ValueToTuple<ReasonT> & getReason() {
+        ABB_ASSERT(this->state & internal::ERROR_STATE, "Reason is not set");
+        return *this->value.reason;
+    }
 
 protected:
     void complete();
 
-    ValueToVault<ResultType, ReasonType> value;
-    State state;
+    internal::ValueToVault<ResultType, ReasonType> value;
+    internal::State state;
     Successor * successor;
 };
 
 template<typename ResultT, typename ReasonT>
-ValueBrickBase<ResultT, ReasonT>::ValueBrickBase(): state(NEW_STATE), successor(nullptr) {}
+ValueBrick<ResultT, ReasonT>::ValueBrick(): state(internal::NEW_STATE), successor(nullptr) {}
 
 template<typename ResultT, typename ReasonT>
-ValueBrickBase<ResultT, ReasonT>::~ValueBrickBase() {
-    ABB_ASSERT(this->state & DONE_STATE, "Not done yet");
-    this->value.destroy(this->state & SUCCESS_STATE);
+ValueBrick<ResultT, ReasonT>::~ValueBrick() {
+    ABB_ASSERT(this->state & internal::DONE_STATE, "Not done yet");
+    this->value.destroy(this->state & internal::SUCCESS_STATE);
 }
 
 template<typename ResultT, typename ReasonT>
-void ValueBrickBase<ResultT, ReasonT>::setSuccessor(Successor & successor) {
+void ValueBrick<ResultT, ReasonT>::setSuccessor(Successor & successor) {
     ABB_ASSERT(!this->successor, "Already got successor");
     this->successor = &successor;
-    if (this->state != NEW_STATE) {
-        Island::current().enqueue(std::bind(&ValueBrickBase::complete, this));
+    if (this->state != internal::NEW_STATE) {
+        Island::current().enqueue(std::bind(&ValueBrick::complete, this));
     }
 }
 
 template<typename ResultT, typename ReasonT>
-void ValueBrickBase<ResultT, ReasonT>::complete() {
-    this->state |= DONE_STATE;
+void ValueBrick<ResultT, ReasonT>::complete() {
+    this->state |= internal::DONE_STATE;
     this->successor->oncomplete();
 }
 
-
 template<typename ResultT, typename ReasonT>
-class ValueBrickSuccess {};
-
-template<typename ReasonT>
-class ValueBrickSuccess<Und, ReasonT> : public ValueBrickBase<Und, ReasonT> {};
-
-template<typename... ResultArgsT, typename ReasonT>
-class ValueBrickSuccess<void(ResultArgsT...), ReasonT> : public ValueBrickBase<void(ResultArgsT...), ReasonT> {
-public:
-    void setResult(ResultArgsT... args);
-
-    bool hasResult() const;
-    std::tuple<ResultArgsT...> & getResult();
-};
-
-template<typename... ResultArgsT, typename ReasonT>
-void ValueBrickSuccess<void(ResultArgsT...), ReasonT>::setResult(ResultArgsT... args) {
-    ABB_ASSERT(this->state == NEW_STATE, "Already got value");
-    this->value.result.init(std::forward<ResultArgsT>(args)...);
-    this->state = SUCCESS_STATE;
+template<typename... ArgsT>
+void ValueBrick<ResultT, ReasonT>::setResult(ArgsT &&... args) {
+    ABB_ASSERT(this->state == internal::NEW_STATE, "Already got value");
+    this->value.result.init(std::forward<ArgsT>(args)...);
+    this->state = internal::SUCCESS_STATE;
     if (this->successor) {
-        Island::current().enqueue(std::bind(&ValueBrickSuccess::complete, this));
+        Island::current().enqueue(std::bind(&ValueBrick::complete, this));
     }
 }
 
-template<typename... ResultArgsT, typename ReasonT>
-bool ValueBrickSuccess<void(ResultArgsT...), ReasonT>::hasResult() const {
-    return this->state & SUCCESS_STATE;
-}
-
-template<typename... ResultArgsT, typename ReasonT>
-std::tuple<ResultArgsT...> & ValueBrickSuccess<void(ResultArgsT...), ReasonT>::getResult() {
-    ABB_ASSERT(this->state & SUCCESS_STATE, "Result is not set");
-    return *this->value.result;
-}
-
 template<typename ResultT, typename ReasonT>
-class ValueBrickError {};
-
-template<typename ResultT>
-class ValueBrickError<ResultT, Und> : public ValueBrickSuccess<ResultT, Und> {};
-
-template<typename ResultT, typename... ReasonArgsT>
-class ValueBrickError<ResultT, void(ReasonArgsT...)> : public ValueBrickSuccess<ResultT, void(ReasonArgsT...)> {
-public:
-    void setReason(ReasonArgsT... args);
-
-    bool hasReason() const;
-    std::tuple<ReasonArgsT...> & getReason();
-};
-
-template<typename ResultT, typename... ReasonArgsT>
-void ValueBrickError<ResultT, void(ReasonArgsT...)>::setReason(ReasonArgsT... args) {
-    ABB_ASSERT(this->state == NEW_STATE, "Already got value");
-    this->value.reason.init(std::forward<ReasonArgsT>(args)...);
-    this->state = ERROR_STATE;
+template<typename... ArgsT>
+void ValueBrick<ResultT, ReasonT>::setReason(ArgsT &&... args) {
+    ABB_ASSERT(this->state == internal::NEW_STATE, "Already got value");
+    this->value.reason.init(std::forward<ArgsT>(args)...);
+    this->state = internal::ERROR_STATE;
     if (this->successor) {
-        Island::current().enqueue(std::bind(&ValueBrickError::complete, this));
+        Island::current().enqueue(std::bind(&ValueBrick::complete, this));
     }
 }
-
-template<typename ResultT, typename... ReasonArgsT>
-bool ValueBrickError<ResultT, void(ReasonArgsT...)>::hasReason() const {
-    return this->state & ERROR_STATE;
-}
-
-template<typename ResultT, typename... ReasonArgsT>
-std::tuple<ReasonArgsT...> & ValueBrickError<ResultT, void(ReasonArgsT...)>::getReason() {
-    ABB_ASSERT(this->state & ERROR_STATE, "Reason is not set");
-    return *this->value.reason;
-}
-
-} // namespace internal
-
-template<typename ResultT, typename ReasonT>
-using ValueBrick = internal::ValueBrickError<ResultT, ReasonT>;
 
 } // namespace ll
 } // namespace abb
