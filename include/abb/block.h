@@ -120,7 +120,9 @@ private:
 
 public:
     explicit BaseBlock(BrickPtrType brick);
-    BaseBlock(BlockType &&) = default;
+
+    template<typename OtherResultT, typename OtherReasonT>
+    BaseBlock(BaseBlock<OtherResultT, OtherReasonT> && other): brick(std::move(other.brick)) {}
 
     ~BaseBlock() {
         if (!this->empty()) {

@@ -102,7 +102,7 @@ public:
         return this->proxyBrick.hasResult();
     }
 
-    ValueToTuple<ResultT> & getResult() {
+    ValueToTuple<typename BrickPtrType::ResultType> & getResult() {
         return this->proxyBrick.getResult();
     }
 
@@ -110,7 +110,7 @@ public:
         return this->proxyBrick.hasReason();
     }
 
-    ValueToTuple<ReasonT> & getReason() {
+    ValueToTuple<typename BrickPtrType::ReasonType> & getReason() {
         return this->proxyBrick.getReason();
     }
 

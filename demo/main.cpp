@@ -214,11 +214,6 @@ function doSth() {
 */
 
 int main() {
-    static_assert(
-        std::is_same<typename std::decay<int const&>::type, int>::value,
-        "not same"
-    );
-
     Timer timer;
 
     abb::Island island;
