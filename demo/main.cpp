@@ -5,6 +5,7 @@
 #include <condition_variable>
 #include <mutex>
 #include <sstream>
+#include <iostream>
 
 #define LOG(msg) do { std::cerr << "File " << __FILE__ << ", line " << __LINE__ << ": " << msg << std::endl; } while(0)
 

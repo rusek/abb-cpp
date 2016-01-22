@@ -104,7 +104,7 @@ public:
         return *this->value.reason;
     }
 
-protected:
+private:
     void complete();
 
     internal::ValueToBank<ResultType, ReasonType> value;

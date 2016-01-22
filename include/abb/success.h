@@ -4,7 +4,7 @@
 #include <abb/successFwd.h>
 #include <abb/blockFwd.h>
 
-#include <abb/ll/valueBrick.h>
+#include <abb/ll/successBrick.h>
 #include <abb/ll/brickPtr.h>
 
 namespace abb {
@@ -12,16 +12,9 @@ namespace abb {
 template<typename BlockT, typename... ArgsT>
 internal::SuccessReturn<BlockT, ArgsT...> success(ArgsT &&... args) {
     typedef internal::SuccessReturn<BlockT, ArgsT...> BlockType;
-    typedef ll::ValueBrick<typename BlockType::ResultType, typename BlockType::ReasonType> ValueBrickType;
+    typedef ll::SuccessBrick<typename BlockType::ResultType, typename BlockType::ReasonType> SuccessBrickType;
 
-    ValueBrickType * brick = new ValueBrickType;
-    try {
-        brick->setResult(std::forward<ArgsT>(args)...);
-    } catch(...) {
-        delete brick;
-        throw;
-    }
-    return BlockType(ll::makeBrickPtr(brick));
+    return BlockType(ll::makeBrick<SuccessBrickType>(std::forward<ArgsT>(args)...));
 }
 
 
