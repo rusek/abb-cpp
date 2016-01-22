@@ -7,6 +7,7 @@
 #include <cstdlib>
 
 #define LOG(msg) do { std::cerr << msg << " (" << __FILE__ << ":" << __LINE__ << ")" << std::endl; } while (0)
+#define ARG(...) __VA_ARGS__
 
 #define RUN_FUNCTION(func) \
     do { \

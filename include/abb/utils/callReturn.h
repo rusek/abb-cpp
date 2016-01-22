@@ -1,23 +1,13 @@
 #ifndef ABB_UTILS_CALL_RESULT_H
 #define ABB_UTILS_CALL_RESULT_H
 
+#include <type_traits>
+
 namespace abb {
 namespace utils {
 
-namespace internal {
-
-template<typename ReturnT>
-ReturnT a();
-
-} // namespace internal
-
 template<typename FuncT, typename... ArgsT>
-struct CallResult {
-    typedef decltype(internal::a<FuncT>()(internal::a<ArgsT>()...)) Type;
-};
-
-template<typename FuncT, typename... ArgsT>
-using CallReturn = typename CallResult<FuncT, ArgsT...>::Type;
+using CallReturn = typename std::result_of<FuncT(ArgsT...)>::type;
 
 } // namespace utils
 } // namespace abb

@@ -28,33 +28,34 @@ BlockT value(ArgsT &&... args) {
     return abb::success<BlockT>(std::forward<ArgsT>(args)...);
 }
 
+template<typename BlockT>
 void testSuccessPiping() {
     struct Funcs {
-        static IntBlock requireSeven(int num) {
+        static BlockT requireSeven(int num) {
             REQUIRE_EQUAL(num, 7);
             return abb::success(num);
         }
-        static IntBlock requireSevenConst(const int num) {
+        static BlockT requireSevenConst(const int num) {
             REQUIRE_EQUAL(num, 7);
             return abb::success(num);
         }
-        static IntBlock requireSevenConstRef(const int & num) {
+        static BlockT requireSevenConstRef(const int & num) {
             REQUIRE_EQUAL(num, 7);
             return abb::success(num);
         }
-        static IntBlock requireSevenRval(int && num) {
+        static BlockT requireSevenRval(int && num) {
             REQUIRE_EQUAL(num, 7);
             return abb::success(num);
         }
-        static IntBlock inc(int num) {
+        static BlockT inc(int num) {
             return abb::success(num + 1);
         }
-        static IntBlock require(int required, int num) {
+        static BlockT require(int required, int num) {
             REQUIRE_EQUAL(required, num);
             return abb::success(num);
         }
     };
-    abb::success(7).pipe(
+    abb::success<BlockT>(7).pipe(
         &Funcs::requireSeven
     ).pipe(
         &Funcs::requireSevenConst
@@ -67,6 +68,7 @@ void testSuccessPiping() {
     );
 }
 
+template<typename BlockT>
 class SuccessRefPipingTest {
 public:
     SuccessRefPipingTest(): val(10) {}
@@ -74,7 +76,7 @@ public:
     void operator()();
 
 private:
-    IdentityIntRefBlock requireTen(IdentityInt & val) {
+    BlockT requireTen(IdentityInt & val) {
         REQUIRE_EQUAL(&val, &this->val);
         REQUIRE_EQUAL(*val, 10);
         return abb::success<IdentityIntRefBlock>(val);
@@ -83,36 +85,36 @@ private:
     IdentityInt val;
 };
 
-void SuccessRefPipingTest::operator()() {
-    IdentityIntRefBlock block(abb::success(std::ref(this->val)));
+template<typename BlockT>
+void SuccessRefPipingTest<BlockT>::operator()() {
+    BlockT block(abb::success(std::ref(this->val)));
 
     block.pipe(
         std::bind(&SuccessRefPipingTest::requireTen, this, std::placeholders::_1)
     );
 }
 
+template<typename BlockT>
 void testErrorPiping() {
-    typedef abb::ErrorBlock<int> BlockType;
-
     struct Funcs {
-        static BlockType requireSeven(int num) {
+        static BlockT requireSeven(int num) {
             REQUIRE_EQUAL(num, 7);
             return abb::error(num);
         }
-        static BlockType requireSevenConst(const int num) {
+        static BlockT requireSevenConst(const int num) {
             REQUIRE_EQUAL(num, 7);
             return abb::error(num);
         }
-        static BlockType requireSevenConstRef(const int & num) {
+        static BlockT requireSevenConstRef(const int & num) {
             REQUIRE_EQUAL(num, 7);
             return abb::error(num);
         }
-        static BlockType requireSevenRval(int && num) {
+        static BlockT requireSevenRval(int && num) {
             REQUIRE_EQUAL(num, 7);
             return abb::error(num);
         }
     };
-    abb::error(7).pipe(
+    abb::error<BlockT>(7).pipe(
         abb::pass,
         &Funcs::requireSeven
     ).pipe(
@@ -127,6 +129,7 @@ void testErrorPiping() {
     );
 }
 
+template<typename BlockT>
 class ErrorRefPipingTest {
 public:
     ErrorRefPipingTest(): val(10) {}
@@ -134,17 +137,18 @@ public:
     void operator()();
 
 private:
-     abb::Block<abb::Und, void(IdentityInt&)> requireTen(IdentityInt & val) {
+     BlockT requireTen(IdentityInt & val) {
         REQUIRE_EQUAL(&val, &this->val);
         REQUIRE_EQUAL(*val, 10);
-        return abb::error<abb::Block<abb::Und, void(IdentityInt&)>>(val);
+        return abb::error(std::ref(val));
     };
 
     IdentityInt val;
 };
 
-void ErrorRefPipingTest::operator()() {
-    abb::error(std::ref(this->val)).pipe(
+template<typename BlockT>
+void ErrorRefPipingTest<BlockT>::operator()() {
+    abb::error<BlockT>(this->val).pipe(
         abb::pass,
         std::bind(&ErrorRefPipingTest::requireTen, this, std::placeholders::_1)
     ).pipe(
@@ -154,9 +158,15 @@ void ErrorRefPipingTest::operator()() {
 }
 
 int main() {
-    RUN_FUNCTION(testSuccessPiping);
-    RUN_CLASS(SuccessRefPipingTest);
-    RUN_FUNCTION(testErrorPiping);
-    RUN_CLASS(ErrorRefPipingTest);
+    RUN_FUNCTION(testSuccessPiping<IntBlock>);
+    RUN_FUNCTION(ARG(testSuccessPiping<abb::Block<int, void>>));
+    RUN_FUNCTION(ARG(testSuccessPiping<abb::Block<int, std::string>>));
+    RUN_CLASS(SuccessRefPipingTest<IdentityIntRefBlock>);
+    RUN_CLASS(ARG(SuccessRefPipingTest<abb::Block<IdentityInt&, void>>));
+    RUN_FUNCTION(ARG(testErrorPiping<abb::ErrorBlock<int>>));
+    RUN_FUNCTION(ARG(testErrorPiping<abb::Block<void, int>>));
+    RUN_FUNCTION(ARG(testErrorPiping<abb::Block<int, int>>));
+    RUN_CLASS(ARG(ErrorRefPipingTest<abb::Block<abb::Und, IdentityInt&>>));
+    RUN_CLASS(ARG(ErrorRefPipingTest<abb::Block<IdentityInt&, IdentityInt&>>));
     return 0;
 }
