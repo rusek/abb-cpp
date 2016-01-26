@@ -1,8 +1,6 @@
 #ifndef ABB_LL_PIPE_BRICK_H
 #define ABB_LL_PIPE_BRICK_H
 
-#include <abb/ll/proxyBrick.h>
-
 #include <abb/utils/callReturn.h>
 #include <abb/utils/call.h>
 
@@ -95,19 +93,22 @@ public:
     );
 
     void setSuccessor(Successor & successor) {
-        this->proxyBrick.setSuccessor(successor);
+        this->successor = &successor;
+        if (this->outBrick) {
+            this->outBrick.setSuccessor(successor);
+        }
     }
 
     Status getStatus() const {
-        return this->proxyBrick.getStatus();
+        return this->outBrick ? this->outBrick.getStatus() : PENDING;
     }
 
     ValueToTuple<typename BrickPtrType::ResultType> & getResult() {
-        return this->proxyBrick.getResult();
+        return this->outBrick.getResult();
     }
 
     ValueToTuple<typename BrickPtrType::ReasonType> & getReason() {
-        return this->proxyBrick.getReason();
+        return this->outBrick.getReason();
     }
 
 private:
@@ -115,7 +116,8 @@ private:
 
     InBrickPtrType inBrick;
     ContPairType contPair;
-    ProxyBrick<typename BrickPtrType::ResultType, typename BrickPtrType::ReasonType> proxyBrick;
+    BrickPtr<typename BrickPtrType::ResultType, typename BrickPtrType::ReasonType> outBrick;
+    Successor * successor;
 };
 
 template<typename ResultT, typename ReasonT, typename SuccessContT, typename ErrorContT>
@@ -125,14 +127,18 @@ PipeBrick<ResultT, ReasonT, SuccessContT, ErrorContT>::PipeBrick(
     ErrorContT errorCont
 ):
     inBrick(std::move(inBrick)),
-    contPair(std::move(successCont), std::move(errorCont))
+    contPair(std::move(successCont), std::move(errorCont)),
+    successor(nullptr)
 {
     this->inBrick.setSuccessor(*this);
 }
 
 template<typename ResultT, typename ReasonT, typename SuccessContT, typename ErrorContT>
 void PipeBrick<ResultT, ReasonT, SuccessContT, ErrorContT>::oncomplete() {
-    this->proxyBrick.setBrick(this->contPair.call(this->inBrick));
+    this->outBrick = this->contPair.call(this->inBrick);
+    if (this->successor) {
+        this->outBrick.setSuccessor(*this->successor);
+    }
 }
 
 } // namespace ll

@@ -6,7 +6,6 @@
 #include <abb/blockFwd.h>
 
 #include <abb/ll/brick.h>
-#include <abb/ll/proxyBrick.h>
 #include <abb/ll/pureExitBrick.h>
 #include <abb/ll/successor.h>
 #include <abb/ll/detachSuccessor.h>
