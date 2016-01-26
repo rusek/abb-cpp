@@ -69,7 +69,7 @@ using ValueToBank = typename ValueBankImpl<ResultT, ReasonT>::Type;
 } // namespace internal
 
 template<typename ResultT, typename ReasonT>
-class ValueBrick : public Brick<ResultT, ReasonT> {
+class ValueBrick : public Brick<ResultT, ReasonT>, private Task {
 public:
     typedef ResultT ResultType;
     typedef ReasonT ReasonType;
@@ -105,7 +105,7 @@ public:
     }
 
 private:
-    void complete();
+    virtual void run();
 
     internal::ValueToBank<ResultType, ReasonType> value;
     internal::State state;
@@ -126,12 +126,12 @@ void ValueBrick<ResultT, ReasonT>::setSuccessor(Successor & successor) {
     ABB_ASSERT(!this->successor, "Already got successor");
     this->successor = &successor;
     if (this->state != internal::NEW_STATE) {
-        Island::current().enqueue(std::bind(&ValueBrick::complete, this));
+        Island::current().enqueue(*this);
     }
 }
 
 template<typename ResultT, typename ReasonT>
-void ValueBrick<ResultT, ReasonT>::complete() {
+void ValueBrick<ResultT, ReasonT>::run() {
     this->state |= internal::DONE_STATE;
     this->successor->oncomplete();
 }
@@ -143,7 +143,7 @@ void ValueBrick<ResultT, ReasonT>::setResult(ArgsT &&... args) {
     this->value.result.init(std::forward<ArgsT>(args)...);
     this->state = internal::SUCCESS_STATE;
     if (this->successor) {
-        Island::current().enqueue(std::bind(&ValueBrick::complete, this));
+        Island::current().enqueue(*this);
     }
 }
 
@@ -154,7 +154,7 @@ void ValueBrick<ResultT, ReasonT>::setReason(ArgsT &&... args) {
     this->value.reason.init(std::forward<ArgsT>(args)...);
     this->state = internal::ERROR_STATE;
     if (this->successor) {
-        Island::current().enqueue(std::bind(&ValueBrick::complete, this));
+        Island::current().enqueue(*this);
     }
 }
 

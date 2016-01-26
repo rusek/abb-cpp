@@ -12,7 +12,7 @@ namespace abb {
 namespace ll {
 
 template<typename ResultT, typename ReasonT>
-class ErrorBrick : public Brick<ResultT, ReasonT> {
+class ErrorBrick : public Brick<ResultT, ReasonT>, private Task {
 public:
     typedef ResultT ResultType;
     typedef ReasonT ReasonType;
@@ -25,7 +25,7 @@ public:
     void setSuccessor(Successor & successor) {
         ABB_ASSERT(!this->successor, "Already got successor");
         this->successor = &successor;
-        Island::current().enqueue(std::bind(&ErrorBrick::complete, this));
+        Island::current().enqueue(*this);
     }
 
     bool hasResult() const {
@@ -45,14 +45,14 @@ public:
     }
 
 private:
-    void complete();
+    virtual void run();
 
     ValueToTuple<ReasonType> reason;
     Successor * successor;
 };
 
 template<typename ResultT, typename ReasonT>
-void ErrorBrick<ResultT, ReasonT>::complete() {
+void ErrorBrick<ResultT, ReasonT>::run() {
     this->successor->oncomplete();
 }
 

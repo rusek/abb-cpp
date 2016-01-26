@@ -30,27 +30,35 @@ BlockT value(ArgsT &&... args) {
 
 template<typename BlockT>
 void testSuccessPiping() {
+    EXPECT_HITS(7);
+
     struct Funcs {
         static BlockT requireSeven(int num) {
+            HIT();
             REQUIRE_EQUAL(num, 7);
             return abb::success(num);
         }
         static BlockT requireSevenConst(const int num) {
+            HIT();
             REQUIRE_EQUAL(num, 7);
             return abb::success(num);
         }
         static BlockT requireSevenConstRef(const int & num) {
+            HIT();
             REQUIRE_EQUAL(num, 7);
             return abb::success(num);
         }
         static BlockT requireSevenRval(int && num) {
+            HIT();
             REQUIRE_EQUAL(num, 7);
             return abb::success(num);
         }
         static BlockT inc(int num) {
+            HIT();
             return abb::success(num + 1);
         }
         static BlockT require(int required, int num) {
+            HIT();
             REQUIRE_EQUAL(required, num);
             return abb::success(num);
         }
@@ -96,20 +104,26 @@ void SuccessRefPipingTest<BlockT>::operator()() {
 
 template<typename BlockT>
 void testErrorPiping() {
+    EXPECT_HITS(4);
+
     struct Funcs {
         static BlockT requireSeven(int num) {
+            HIT();
             REQUIRE_EQUAL(num, 7);
             return abb::error(num);
         }
         static BlockT requireSevenConst(const int num) {
+            HIT();
             REQUIRE_EQUAL(num, 7);
             return abb::error(num);
         }
         static BlockT requireSevenConstRef(const int & num) {
+            HIT();
             REQUIRE_EQUAL(num, 7);
             return abb::error(num);
         }
         static BlockT requireSevenRval(int && num) {
+            HIT();
             REQUIRE_EQUAL(num, 7);
             return abb::error(num);
         }

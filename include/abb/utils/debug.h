@@ -27,7 +27,7 @@ struct FiascoInfo {
 
 #define ABB_FIASCO_IF(cond, msg) \
     do { \
-        if (!(cond)) { \
+        if (cond) { \
             ABB_FIASCO(msg); \
         } \
     } while (0)

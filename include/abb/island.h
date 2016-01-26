@@ -4,6 +4,8 @@
 #include <abb/utils/debug.h>
 #include <abb/utils/noncopyable.h>
 
+#include <abb/task.h>
+
 #include <functional>
 #include <deque>
 
@@ -19,8 +21,10 @@ public:
     ~Island();
 
     void enqueue(std::function<void()> task);
+    void enqueue(Task & task);
 
     void enqueueExternal(std::function<void()> task);
+    void enqueueExternal(Task & task);
     void increfExternal();
     void decrefExternal();
 
@@ -29,11 +33,11 @@ public:
     static Island & current();
 
 private:
-    std::deque<std::function<void()>> tasks;
+    TaskQueue tasks;
 
     std::mutex mutex;
     std::condition_variable condition;
-    std::deque<std::function<void()>> externalTasks;
+    TaskQueue externalTasks;
     std::size_t externalCounter;
 
     static Island * currentPtr;
