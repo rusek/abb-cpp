@@ -6,7 +6,6 @@
 #include <abb/blockFwd.h>
 
 #include <abb/ll/brick.h>
-#include <abb/ll/pureExitBrick.h>
 #include <abb/ll/successor.h>
 #include <abb/ll/detachSuccessor.h>
 #include <abb/ll/pipeBrick.h>
@@ -149,8 +148,6 @@ public:
         return this->pipe(std::forward<SuccessContT>(successCont), abb::pass);
     }
 
-    BlockType exit(std::function<void()> func);
-
 private:
     template<typename ContT>
     class Unpacker {
@@ -258,11 +255,6 @@ auto BaseBlock<ResultT, ReasonT>::pipe(
         SuccessContBuilder::build(std::forward<SuccessContT>(successCont)),
         ErrorContBuilder::build(std::forward<ErrorContT>(errorCont))
     ));
-}
-
-template<typename ResultT, typename ReasonT>
-auto BaseBlock<ResultT, ReasonT>::exit(std::function<void()> func) -> BlockType {
-    return BlockType(ll::makeBrick<ll::PureExitBrick<ResultType, Und>>(func, this->takeBrick()));
 }
 
 template<typename ResultT, typename ReasonT>

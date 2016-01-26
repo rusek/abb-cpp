@@ -60,13 +60,6 @@ BlockType impl(FuncType func) {
     return BlockType(ll::makeBrickPtr(brick));
 }
 
-template<typename FuncType>
-auto run(FuncType func) -> decltype(func()) {
-    FuncType * func2 = new FuncType(std::move(func));
-
-    return (*func2)().exit(std::bind(std::default_delete<FuncType>(), func2));
-}
-
 } // namespace abb
 
 #endif // ABB_H

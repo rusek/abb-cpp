@@ -139,8 +139,6 @@ StringErrorBlock notFound() {
 
 void doSth() {
     abb::impl<IntBlock>(&putFive).pipe(&increment).pipe(&increment);
-
-    abb::run(DoSthLoop());
 }
 
 void doSthWithErrors() {
