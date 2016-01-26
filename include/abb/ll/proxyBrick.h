@@ -20,16 +20,12 @@ public:
 
     void setSuccessor(Successor & successor);
 
-    bool hasResult() const {
-        return this->brick && this->brick.hasResult();
+    Status getStatus() const {
+        return this->brick ? this->brick.getStatus() : PENDING;
     }
 
     ValueToTuple<ResultT> & getResult() {
         return this->brick.getResult();
-    }
-
-    bool hasReason() const {
-        return this->brick && this->brick.hasReason();
     }
 
     ValueToTuple<ReasonT> & getReason() {

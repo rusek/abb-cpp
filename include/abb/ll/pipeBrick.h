@@ -35,7 +35,7 @@ public:
         ErrorBase(Und(), errorCont) {}
 
     BrickPtrType call(BrickPtr<ResultT, ReasonT> & inBrick) {
-        return inBrick.hasResult() ?
+        return inBrick.getStatus() & SUCCESS ?
             this->SuccessBase::call(inBrick) :
             this->ErrorBase::call(inBrick);
     }
@@ -98,16 +98,12 @@ public:
         this->proxyBrick.setSuccessor(successor);
     }
 
-    bool hasResult() const {
-        return this->proxyBrick.hasResult();
+    Status getStatus() const {
+        return this->proxyBrick.getStatus();
     }
 
     ValueToTuple<typename BrickPtrType::ResultType> & getResult() {
         return this->proxyBrick.getResult();
-    }
-
-    bool hasReason() const {
-        return this->proxyBrick.hasReason();
     }
 
     ValueToTuple<typename BrickPtrType::ReasonType> & getReason() {

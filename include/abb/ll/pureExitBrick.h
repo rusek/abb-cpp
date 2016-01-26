@@ -17,7 +17,11 @@ public:
     virtual ~PureExitBrick();
 
     void setSuccessor(Successor & successor);
-    bool hasResult() const;
+
+    Status getStatus() const {
+        return this->brick.getStatus();
+    }
+
     ValueToTuple<ResultT> & getResult();
 
 private:
@@ -41,11 +45,6 @@ template<typename ResultT, typename ReasonT>
 void PureExitBrick<ResultT, ReasonT>::setSuccessor(Successor & successor) {
     this->successor = &successor;
     this->brick.setSuccessor(*this); // FIXME too late for that!
-}
-
-template<typename ResultT, typename ReasonT>
-bool PureExitBrick<ResultT, ReasonT>::hasResult() const {
-    return this->brick.hasResult();
 }
 
 template<typename ResultT, typename ReasonT>

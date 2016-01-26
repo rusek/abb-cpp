@@ -27,6 +27,15 @@ struct ValueToTupleImpl<Und> {
 
 } // namespace internal
 
+enum {
+    PENDING = 0,
+    SUCCESS = 1,
+    ERROR = 2,
+    ABORT = 4
+};
+
+typedef int Status;
+
 template<typename ValueT>
 using ValueToTuple = typename internal::ValueToTupleImpl<ValueT>::Type;
 

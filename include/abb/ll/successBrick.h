@@ -28,16 +28,12 @@ public:
         Island::current().enqueue(*this);
     }
 
-    bool hasResult() const {
-        return true;
+    Status getStatus() const {
+        return SUCCESS;
     }
 
     ValueToTuple<ResultT> & getResult() {
         return this->result;
-    }
-
-    bool hasReason() const {
-        return false;
     }
 
     ValueToTuple<ReasonT> & getReason() {

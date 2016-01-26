@@ -15,12 +15,11 @@ typedef void RawValue;
 struct BrickVtable {
     // Base methods
     void (*setSuccessor)(RawBrick * brick, Successor & successor);
+    Status (*getStatus)(RawBrick const* brick);
     void (*destroy)(RawBrick * brick);
     // Success-related methods
-    bool (*hasResult)(RawBrick const* brick);
     RawValue * (*getResult)(RawBrick * brick);
     // Error-related methods
-    bool (*hasReason)(RawBrick const* brick);
     RawValue * (*getReason)(RawBrick * brick);
 };
 
@@ -43,10 +42,9 @@ struct BrickFuncs {
     }
 
     static void setSuccessor(RawBrick * brick, Successor & successor);
+    static Status getStatus(RawBrick const* brick);
     static void destroy(RawBrick * brick);
-    static bool hasResult(RawBrick const* brick);
     static RawValue * getResult(RawBrick * brick);
-    static bool hasReason(RawBrick const* brick);
     static RawValue * getReason(RawBrick * brick);
 
     static const BrickVtable vtable;
@@ -63,25 +61,11 @@ private:
         return static_cast<BrickT const*>(brick);
     }
 
-    static bool hasResult(RawBrick const* brick, std::true_type) {
-        return BrickFuncs::fromRaw(brick)->hasResult();
-    }
-    static bool hasResult(RawBrick const*, std::false_type) {
-        return false;
-    }
-
     static RawValue * getResult(RawBrick * brick, std::true_type) {
         return ValueFuncs<typename BrickT::ResultType>::toRaw(&BrickFuncs::fromRaw(brick)->getResult());
     }
     static RawValue * getResult(RawBrick *, std::false_type) {
         ABB_FIASCO("Erased method called");
-    }
-
-    static bool hasReason(RawBrick const* brick, std::true_type) {
-        return BrickFuncs::fromRaw(brick)->hasReason();
-    }
-    static bool hasReason(RawBrick const*, std::false_type) {
-        return false;
     }
 
     static RawValue * getReason(RawBrick * brick, std::true_type) {
@@ -103,18 +87,13 @@ void BrickFuncs<BrickT>::setSuccessor(RawBrick * brick, Successor & successor) {
 }
 
 template<typename BrickT>
-bool BrickFuncs<BrickT>::hasResult(RawBrick const* brick) {
-    return BrickFuncs::hasResult(brick, ResultDefined());
+Status BrickFuncs<BrickT>::getStatus(RawBrick const* brick) {
+    return BrickFuncs::fromRaw(brick)->getStatus();
 }
 
 template<typename BrickT>
 RawValue * BrickFuncs<BrickT>::getResult(RawBrick * brick) {
     return BrickFuncs::getResult(brick, ResultDefined());
-}
-
-template<typename BrickT>
-bool BrickFuncs<BrickT>::hasReason(RawBrick const* brick) {
-    return BrickFuncs::hasReason(brick, ReasonDefined());
 }
 
 template<typename BrickT>
@@ -125,10 +104,9 @@ RawValue * BrickFuncs<BrickT>::getReason(RawBrick * brick) {
 template<typename BrickT>
 const BrickVtable BrickFuncs<BrickT>::vtable = {
     &BrickFuncs::setSuccessor,
+    &BrickFuncs::getStatus,
     &BrickFuncs::destroy,
-    &BrickFuncs::hasResult,
     &BrickFuncs::getResult,
-    &BrickFuncs::hasReason,
     &BrickFuncs::getReason
 };
 
@@ -197,16 +175,12 @@ public:
         this->vtable->setSuccessor(this->ptr, successor);
     }
 
-    bool hasResult() const {
-        return this->vtable->hasResult(this->ptr);
+    Status getStatus() const {
+        return this->vtable->getStatus(this->ptr);
     }
 
     ValueToTuple<ResultT> & getResult() {
         return *internal::ValueFuncs<ResultT>::fromRaw(this->vtable->getResult(this->ptr));
-    }
-
-    bool hasReason() const {
-        return this->vtable->hasReason(this->ptr);
     }
 
     ValueToTuple<ReasonT> & getReason() {

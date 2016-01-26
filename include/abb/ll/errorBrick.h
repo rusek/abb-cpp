@@ -28,16 +28,12 @@ public:
         Island::current().enqueue(*this);
     }
 
-    bool hasResult() const {
-        return false;
+    Status getStatus() const {
+        return ERROR;
     }
 
     ValueToTuple<ResultT> & getResult() {
         ABB_FIASCO("getReason called on ErrorBrick");
-    }
-
-    bool hasReason() const {
-        return true;
     }
 
     ValueToTuple<ReasonT> & getReason() {
