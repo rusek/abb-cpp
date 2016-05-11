@@ -69,6 +69,10 @@ public:
 
     ~ValueBrick();
 
+    void abort() {
+        this->status |= ABORT;
+    }
+
     void setSuccessor(Successor & successor);
 
     Status getStatus() const {

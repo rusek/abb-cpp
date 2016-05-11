@@ -14,6 +14,7 @@ typedef void RawValue;
 
 struct BrickVtable {
     // Base methods
+    void (*abort)(RawBrick * brick);
     void (*setSuccessor)(RawBrick * brick, Successor & successor);
     Status (*getStatus)(RawBrick const* brick);
     void (*destroy)(RawBrick * brick);
@@ -41,6 +42,7 @@ struct BrickFuncs {
         return static_cast<RawBrick*>(brick);
     }
 
+    static void abort(RawBrick * brick);
     static void setSuccessor(RawBrick * brick, Successor & successor);
     static Status getStatus(RawBrick const* brick);
     static void destroy(RawBrick * brick);
@@ -82,6 +84,11 @@ void BrickFuncs<BrickT>::destroy(RawBrick * brick) {
 }
 
 template<typename BrickT>
+void BrickFuncs<BrickT>::abort(RawBrick * brick) {
+    BrickFuncs::fromRaw(brick)->abort();
+}
+
+template<typename BrickT>
 void BrickFuncs<BrickT>::setSuccessor(RawBrick * brick, Successor & successor) {
     BrickFuncs::fromRaw(brick)->setSuccessor(successor);
 }
@@ -103,6 +110,7 @@ RawValue * BrickFuncs<BrickT>::getReason(RawBrick * brick) {
 
 template<typename BrickT>
 const BrickVtable BrickFuncs<BrickT>::vtable = {
+    &BrickFuncs::abort,
     &BrickFuncs::setSuccessor,
     &BrickFuncs::getStatus,
     &BrickFuncs::destroy,
@@ -150,7 +158,15 @@ public:
     }
 
     BrickPtr & operator=(BrickPtr const&) = delete;
-    BrickPtr & operator=(BrickPtr && other) {
+
+    template<
+        typename OtherResultT,
+        typename OtherReasonT,
+        typename std::enable_if<
+            internal::IsValueSubstitutable<ResultT, OtherResultT>::value &&
+            internal::IsValueSubstitutable<ReasonT, OtherReasonT>::value
+        >::type* = nullptr
+    > BrickPtr & operator=(BrickPtr<OtherResultT, OtherReasonT> && other) {
         if (this->ptr) {
             this->vtable->destroy(this->ptr);
         }
@@ -169,6 +185,10 @@ public:
 
     explicit operator bool() const {
         return this->ptr;
+    }
+
+    void abort() {
+        this->vtable->abort(this->ptr);
     }
 
     void setSuccessor(Successor & successor) {

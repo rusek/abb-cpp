@@ -75,7 +75,7 @@ private:
 
 } // namespace internal
 
-template<typename ResultT, typename ReasonT, typename SuccessContT, typename ErrorContT>
+template<typename ResultT, typename ReasonT, typename SuccessContT, typename ErrorContT, typename AbortContT>
 class PipeBrick :
     public internal::ContPair<ResultT, ReasonT, SuccessContT, ErrorContT>::BrickType,
     private Successor
@@ -89,8 +89,17 @@ public:
     PipeBrick(
         InBrickPtrType inBrick,
         SuccessContT successCont,
-        ErrorContT errorCont
+        ErrorContT errorCont,
+        AbortContT abortCont
     );
+
+    void abort() {
+        if (this->outBrick) {
+            this->outBrick.abort();
+        } else {
+            this->inBrick.abort();
+        }
+    }
 
     void setSuccessor(Successor & successor) {
         this->successor = &successor;
@@ -116,26 +125,33 @@ private:
 
     InBrickPtrType inBrick;
     ContPairType contPair;
+    AbortContT abortCont;
     BrickPtr<typename BrickPtrType::ResultType, typename BrickPtrType::ReasonType> outBrick;
     Successor * successor;
 };
 
-template<typename ResultT, typename ReasonT, typename SuccessContT, typename ErrorContT>
-PipeBrick<ResultT, ReasonT, SuccessContT, ErrorContT>::PipeBrick(
+template<typename ResultT, typename ReasonT, typename SuccessContT, typename ErrorContT, typename AbortContT>
+PipeBrick<ResultT, ReasonT, SuccessContT, ErrorContT, AbortContT>::PipeBrick(
     InBrickPtrType inBrick,
     SuccessContT successCont,
-    ErrorContT errorCont
+    ErrorContT errorCont,
+    AbortContT abortCont
 ):
     inBrick(std::move(inBrick)),
     contPair(std::move(successCont), std::move(errorCont)),
+    abortCont(std::move(abortCont)),
     successor(nullptr)
 {
     this->inBrick.setSuccessor(*this);
 }
 
-template<typename ResultT, typename ReasonT, typename SuccessContT, typename ErrorContT>
-void PipeBrick<ResultT, ReasonT, SuccessContT, ErrorContT>::oncomplete() {
-    this->outBrick = this->contPair.call(this->inBrick);
+template<typename ResultT, typename ReasonT, typename SuccessContT, typename ErrorContT, typename AbortContT>
+void PipeBrick<ResultT, ReasonT, SuccessContT, ErrorContT, AbortContT>::oncomplete() {
+    if (this->inBrick.getStatus() & ABORT) {
+        this->outBrick = this->abortCont();
+    } else {
+        this->outBrick = this->contPair.call(this->inBrick);
+    }
     if (this->successor) {
         this->outBrick.setSuccessor(*this->successor);
     }

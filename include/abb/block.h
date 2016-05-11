@@ -10,6 +10,7 @@
 #include <abb/ll/detachSuccessor.h>
 #include <abb/ll/pipeBrick.h>
 #include <abb/ll/brickPtr.h>
+#include <abb/ll/abortBrick.h>
 
 #include <abb/utils/debug.h>
 #include <abb/utils/noncopyable.h>
@@ -245,15 +246,23 @@ auto BaseBlock<ResultT, ReasonT>::pipe(
     typedef internal::ContBuilder<BrickSuccessContType, SuccessContD, SuccessContT> SuccessContBuilder;
     typedef internal::ContBuilder<BrickErrorContType, ErrorContD, ErrorContT> ErrorContBuilder;
 
+    struct AbortCont {
+        ll::BrickPtr<Und, Und> operator()() {
+            return ll::makeBrick<ll::AbortBrick>();
+        }
+    };
+
     return OutBlockType(ll::makeBrick<ll::PipeBrick<
         ResultType,
         ReasonType,
         BrickSuccessContType,
-        BrickErrorContType
+        BrickErrorContType,
+        AbortCont
     >>(
         this->takeBrick(),
         SuccessContBuilder::build(std::forward<SuccessContT>(successCont)),
-        ErrorContBuilder::build(std::forward<ErrorContT>(errorCont))
+        ErrorContBuilder::build(std::forward<ErrorContT>(errorCont)),
+        AbortCont()
     ));
 }
 

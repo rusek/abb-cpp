@@ -20,7 +20,12 @@ public:
     template<typename... ArgsT>
     explicit SuccessBrick(ArgsT &&... args):
         result(std::forward<ArgsT>(args)...),
+        status(SUCCESS),
         successor(nullptr) {}
+
+    void abort() {
+        this->status |= ABORT;
+    }
 
     void setSuccessor(Successor & successor) {
         ABB_ASSERT(!this->successor, "Already got successor");
@@ -29,7 +34,7 @@ public:
     }
 
     Status getStatus() const {
-        return SUCCESS;
+        return this->status;
     }
 
     ValueToTuple<ResultT> & getResult() {
@@ -44,6 +49,7 @@ private:
     virtual void run();
 
     ValueToTuple<ResultType> result;
+    Status status;
     Successor * successor;
 };
 

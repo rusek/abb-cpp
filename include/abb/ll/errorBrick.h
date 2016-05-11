@@ -20,7 +20,12 @@ public:
     template<typename... ArgsT>
     explicit ErrorBrick(ArgsT &&... args):
         reason(std::forward<ArgsT>(args)...),
+        status(ERROR),
         successor(nullptr) {}
+
+    void abort() {
+        this->status |= ABORT;
+    }
 
     void setSuccessor(Successor & successor) {
         ABB_ASSERT(!this->successor, "Already got successor");
@@ -29,7 +34,7 @@ public:
     }
 
     Status getStatus() const {
-        return ERROR;
+        return this->status;
     }
 
     ValueToTuple<ResultT> & getResult() {
@@ -44,6 +49,7 @@ private:
     virtual void run();
 
     ValueToTuple<ReasonType> reason;
+    Status status;
     Successor * successor;
 };
 
