@@ -123,11 +123,7 @@ public:
     template<typename OtherResultT, typename OtherReasonT>
     BaseBlock(BaseBlock<OtherResultT, OtherReasonT> && other): brick(std::move(other.brick)) {}
 
-    ~BaseBlock() {
-        if (!this->empty()) {
-            this->detach();
-        }
-    }
+    ~BaseBlock() {}
 
     bool empty() const {
         return !this->brick;
@@ -147,6 +143,10 @@ public:
         Pass
     >::BlockType pipe(SuccessContT && successCont) {
         return this->pipe(std::forward<SuccessContT>(successCont), abb::pass);
+    }
+
+    void run() {
+        this->detach();
     }
 
 private:

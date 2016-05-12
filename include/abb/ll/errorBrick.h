@@ -12,7 +12,7 @@ namespace abb {
 namespace ll {
 
 template<typename ResultT, typename ReasonT>
-class ErrorBrick : public Brick<ResultT, ReasonT>, private Task {
+class ErrorBrick : public Brick<ResultT, ReasonT> {
 public:
     typedef ResultT ResultType;
     typedef ReasonT ReasonType;
@@ -20,17 +20,14 @@ public:
     template<typename... ArgsT>
     explicit ErrorBrick(ArgsT &&... args):
         reason(std::forward<ArgsT>(args)...),
-        status(ERROR),
-        successor(nullptr) {}
+        status(ERROR) {}
 
     void abort() {
         this->status |= ABORT;
     }
 
-    void setSuccessor(Successor & successor) {
-        ABB_ASSERT(!this->successor, "Already got successor");
-        this->successor = &successor;
-        Island::current().enqueue(*this);
+    void run(Successor & successor) {
+        successor.oncomplete();
     }
 
     Status getStatus() const {
@@ -46,17 +43,9 @@ public:
     }
 
 private:
-    virtual void run();
-
     ValueToTuple<ReasonType> reason;
     Status status;
-    Successor * successor;
 };
-
-template<typename ResultT, typename ReasonT>
-void ErrorBrick<ResultT, ReasonT>::run() {
-    this->successor->oncomplete();
-}
 
 } // namespace ll
 } // namespace abb

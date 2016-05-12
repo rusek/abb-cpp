@@ -73,7 +73,7 @@ public:
         this->status |= ABORT;
     }
 
-    void setSuccessor(Successor & successor);
+    void run(Successor & successor);
 
     Status getStatus() const {
         return this->status;
@@ -114,11 +114,11 @@ ValueBrick<ResultT, ReasonT>::~ValueBrick() {
 }
 
 template<typename ResultT, typename ReasonT>
-void ValueBrick<ResultT, ReasonT>::setSuccessor(Successor & successor) {
+void ValueBrick<ResultT, ReasonT>::run(Successor & successor) {
     ABB_ASSERT(!this->successor, "Already got successor");
     this->successor = &successor;
     if (this->status != PENDING) {
-        Island::current().enqueue(*this);
+        this->successor->oncomplete();
     }
 }
 
@@ -134,7 +134,7 @@ void ValueBrick<ResultT, ReasonT>::setResult(ArgsT &&... args) {
     this->value.result.init(std::forward<ArgsT>(args)...);
     this->status = SUCCESS;
     if (this->successor) {
-        Island::current().enqueue(*this);
+        this->successor->getIsland().enqueue(*this);
     }
 }
 
@@ -145,7 +145,7 @@ void ValueBrick<ResultT, ReasonT>::setReason(ArgsT &&... args) {
     this->value.reason.init(std::forward<ArgsT>(args)...);
     this->status = ERROR;
     if (this->successor) {
-        Island::current().enqueue(*this);
+        this->successor->getIsland().enqueue(*this);
     }
 }
 

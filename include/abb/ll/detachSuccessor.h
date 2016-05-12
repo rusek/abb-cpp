@@ -11,12 +11,14 @@ namespace abb {
 namespace ll {
 
 template<typename ResultT, typename ReasonT>
-class DetachSuccessor : private Successor {
+class DetachSuccessor : private Successor, private Task {
 public:
     DetachSuccessor(BrickPtr<ResultT, ReasonT> brick);
 
 private:
     virtual void oncomplete();
+    virtual Island & getIsland() const;
+    virtual void run();
 
     BrickPtr<ResultT, ReasonT> brick;
 };
@@ -27,13 +29,25 @@ DetachSuccessor<ResultT, ReasonT>::DetachSuccessor(
 ):
     brick(std::move(brick))
 {
-    this->brick.setSuccessor(*this);
+    Island::current().enqueue(*this);
 }
 
 template<typename ResultT, typename ReasonT>
 void DetachSuccessor<ResultT, ReasonT>::oncomplete() {
     delete this;
 }
+
+template<typename ResultT, typename ReasonT>
+Island & DetachSuccessor<ResultT, ReasonT>::getIsland() const {
+    return Island::current();
+}
+
+template<typename ResultT, typename ReasonT>
+void DetachSuccessor<ResultT, ReasonT>::run() {
+    this->brick.run(*this);
+}
+
+
 
 } // namespace ll
 } // namespace abb

@@ -2,6 +2,7 @@
 #define ABB_LL_SUCCESSOR_H
 
 #include <abb/und.h>
+#include <abb/island.h>
 
 namespace abb {
 namespace ll {
@@ -10,6 +11,7 @@ class Successor {
 public:
     virtual ~Successor() {}
     virtual void oncomplete() = 0;
+    virtual Island & getIsland() const = 0;
 };
 
 } // namespace ll

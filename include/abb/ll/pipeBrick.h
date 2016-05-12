@@ -101,11 +101,9 @@ public:
         }
     }
 
-    void setSuccessor(Successor & successor) {
+    void run(Successor & successor) {
         this->successor = &successor;
-        if (this->outBrick) {
-            this->outBrick.setSuccessor(successor);
-        }
+        this->inBrick.run(*this);
     }
 
     Status getStatus() const {
@@ -122,6 +120,7 @@ public:
 
 private:
     virtual void oncomplete();
+    virtual Island & getIsland() const;
 
     InBrickPtrType inBrick;
     ContPairType contPair;
@@ -142,7 +141,6 @@ PipeBrick<ResultT, ReasonT, SuccessContT, ErrorContT, AbortContT>::PipeBrick(
     abortCont(std::move(abortCont)),
     successor(nullptr)
 {
-    this->inBrick.setSuccessor(*this);
 }
 
 template<typename ResultT, typename ReasonT, typename SuccessContT, typename ErrorContT, typename AbortContT>
@@ -152,9 +150,12 @@ void PipeBrick<ResultT, ReasonT, SuccessContT, ErrorContT, AbortContT>::oncomple
     } else {
         this->outBrick = this->contPair.call(this->inBrick);
     }
-    if (this->successor) {
-        this->outBrick.setSuccessor(*this->successor);
-    }
+    this->outBrick.run(*this->successor);
+}
+
+template<typename ResultT, typename ReasonT, typename SuccessContT, typename ErrorContT, typename AbortContT>
+Island & PipeBrick<ResultT, ReasonT, SuccessContT, ErrorContT, AbortContT>::getIsland() const {
+    return this->successor->getIsland();
 }
 
 } // namespace ll

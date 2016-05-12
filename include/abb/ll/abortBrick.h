@@ -9,26 +9,19 @@
 namespace abb {
 namespace ll {
 
-class AbortBrick : public Brick<Und, Und>, private Task {
+class AbortBrick : public Brick<Und, Und> {
 public:
-    AbortBrick(): successor(nullptr) {}
+    AbortBrick() {}
 
     void abort() {}
 
-    void setSuccessor(Successor & successor) {
-        ABB_ASSERT(!this->successor, "Already got successor");
-        this->successor = &successor;
-        Island::current().enqueue(*this);
+    void run(Successor & successor) {
+        successor.oncomplete();
     }
 
     Status getStatus() const {
         return ABORT;
     }
-
-private:
-    virtual void run();
-
-    Successor * successor;
 };
 
 } // namespace ll

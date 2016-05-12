@@ -73,7 +73,7 @@ void testSuccessPiping() {
         &Funcs::requireSevenRval
     ).pipe(&Funcs::inc).pipe(&Funcs::inc).pipe(
         std::bind(&Funcs::require, 9, std::placeholders::_1)
-    );
+    ).run();
 }
 
 template<typename BlockT>
@@ -99,7 +99,7 @@ void SuccessRefPipingTest<BlockT>::operator()() {
 
     block.pipe(
         std::bind(&SuccessRefPipingTest::requireTen, this, std::placeholders::_1)
-    );
+    ).run();
 }
 
 template<typename BlockT>
@@ -140,7 +140,7 @@ void testErrorPiping() {
     ).pipe(
         abb::pass,
         &Funcs::requireSevenRval
-    );
+    ).run();
 }
 
 template<typename BlockT>
@@ -168,7 +168,7 @@ void ErrorRefPipingTest<BlockT>::operator()() {
     ).pipe(
         abb::pass,
         std::bind(&ErrorRefPipingTest::requireTen, this, std::placeholders::_1)
-    );
+    ).run();
 }
 
 int main() {
