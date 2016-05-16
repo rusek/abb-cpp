@@ -1,7 +1,6 @@
 #ifndef ABB_LL_PIPE_BRICK_H
 #define ABB_LL_PIPE_BRICK_H
 
-#include <abb/utils/callReturn.h>
 #include <abb/utils/call.h>
 
 #include <type_traits>
@@ -42,7 +41,7 @@ public:
 template<typename... ResultArgsT, typename SuccessContT>
 class ContPair<void(ResultArgsT...), Und, SuccessContT, Und> {
 public:
-    typedef utils::CallReturn<SuccessContT, ResultArgsT...> BrickPtrType;
+    typedef typename std::result_of<SuccessContT(ResultArgsT...)>::type BrickPtrType;
     typedef Brick<typename BrickPtrType::ResultType, typename BrickPtrType::ReasonType> BrickType;
 
     ContPair(SuccessContT successCont, Und): successCont(std::move(successCont)) {}
@@ -59,7 +58,7 @@ private:
 template<typename... ReasonArgsT, typename ErrorContT>
 class ContPair<Und, void(ReasonArgsT...), Und, ErrorContT> {
 public:
-    typedef utils::CallReturn<ErrorContT, ReasonArgsT...> BrickPtrType;
+    typedef typename std::result_of<ErrorContT(ReasonArgsT...)>::type BrickPtrType;
     typedef Brick<typename BrickPtrType::ResultType, typename BrickPtrType::ReasonType> BrickType;
 
     ContPair(Und, ErrorContT errorCont): errorCont(std::move(errorCont)) {}

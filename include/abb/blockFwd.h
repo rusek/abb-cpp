@@ -1,7 +1,7 @@
 #ifndef ABB_BLOCK_FWD
 #define ABB_BLOCK_FWD
 
-#include <abb/und.h>
+#include <abb/special.h>
 
 #include <functional>
 #include <type_traits>

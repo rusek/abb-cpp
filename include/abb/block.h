@@ -14,17 +14,11 @@
 
 #include <abb/utils/debug.h>
 #include <abb/utils/noncopyable.h>
-#include <abb/utils/callReturn.h>
-#include <abb/utils/alternative.h>
 
 #include <functional>
 #include <type_traits>
 
 namespace abb {
-
-struct Pass {};
-
-const Pass pass;
 
 namespace internal {
 
@@ -35,7 +29,7 @@ struct ContTraitsWithReturn {
 };
 
 template<typename ContT, typename... ArgsT>
-struct ContTraits : ContTraitsWithReturn<ContT, utils::CallReturn<ContT, ArgsT...>, ArgsT...> {};
+struct ContTraits : ContTraitsWithReturn<ContT, typename std::result_of<ContT(ArgsT...)>::type, ArgsT...> {};
 
 template<typename BlockT, typename SuccessContT, typename ErrorContT>
 struct BlockContTraits {};

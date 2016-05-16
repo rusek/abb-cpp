@@ -1,7 +1,7 @@
 #ifndef ABB_LL_SUCCESSOR_H
 #define ABB_LL_SUCCESSOR_H
 
-#include <abb/und.h>
+#include <abb/special.h>
 #include <abb/island.h>
 
 namespace abb {
