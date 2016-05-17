@@ -19,19 +19,16 @@ public:
 
     template<typename... ArgsT>
     explicit SuccessBrick(ArgsT &&... args):
-        result(std::forward<ArgsT>(args)...),
-        status(SUCCESS) {}
+        result(std::forward<ArgsT>(args)...) {}
 
-    void abort() {
-        this->status |= ABORT;
-    }
+    void abort() {}
 
     void start(Successor & successor) {
         successor.oncomplete();
     }
 
     Status getStatus() const {
-        return this->status;
+        return SUCCESS;
     }
 
     ValueToTuple<ResultT> & getResult() {
@@ -44,7 +41,6 @@ public:
 
 private:
     ValueToTuple<ResultType> result;
-    Status status;
 };
 
 } // namespace ll

@@ -9,7 +9,7 @@
 namespace abb {
 
 template<typename BlockT, typename FuncT>
-BlockT impl2(FuncT && func) {
+BlockT impl(FuncT && func) {
     typedef typename std::decay<FuncT>::type FuncD;
     typedef ll::ImplBrick<typename BlockT::ResultType, typename BlockT::ReasonType, FuncD> ImplBrickType;
 

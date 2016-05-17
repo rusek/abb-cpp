@@ -88,7 +88,7 @@ VoidBlock wait(Duration dur) {
         }
     };
 
-    return abb::impl2<VoidBlock>(std::bind(&Helpers::wait, std::placeholders::_1, dur));
+    return abb::impl<VoidBlock>(std::bind(&Helpers::wait, std::placeholders::_1, dur));
 };
 
 IntBlock increment(int val) {
@@ -100,7 +100,7 @@ void display(std::string const & msg) {
     std::cerr << msg << std::endl;
 }
 
-void putFive(abb::Answer<void(int)> & answer) {
+void putFive(abb::Reply<int> & answer) {
     answer.setResult(5);
 }
 
@@ -200,7 +200,7 @@ void doSthWithUniqueInt() {
 }
 
 VoidBlock doSthWait() {
-    return wait(std::chrono::milliseconds(2000)).pipe([]() {
+    return wait(std::chrono::milliseconds(200)).pipe([]() {
         LOG("hello");
     });
 }

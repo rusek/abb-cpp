@@ -19,19 +19,16 @@ public:
 
     template<typename... ArgsT>
     explicit ErrorBrick(ArgsT &&... args):
-        reason(std::forward<ArgsT>(args)...),
-        status(ERROR) {}
+        reason(std::forward<ArgsT>(args)...) {}
 
-    void abort() {
-        this->status |= ABORT;
-    }
+    void abort() {}
 
     void start(Successor & successor) {
         successor.oncomplete();
     }
 
     Status getStatus() const {
-        return this->status;
+        return ERROR;
     }
 
     ValueToTuple<ResultT> & getResult() {
@@ -44,7 +41,6 @@ public:
 
 private:
     ValueToTuple<ReasonType> reason;
-    Status status;
 };
 
 } // namespace ll
