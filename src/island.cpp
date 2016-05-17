@@ -31,20 +31,20 @@ Island::Island(): externalCounter(0) {}
 
 Island::~Island() {}
 
-void Island::enqueue(std::function<void()> task) {
+void Island::enqueue2(std::function<void()> task) {
     this->enqueue(*(new FunctorTask<std::function<void()>>(task)));
 }
 
-void Island::enqueue(Task & task) {
+void Island::enqueue2(Task & task) {
     ABB_ASSERT(Island::currentPtr == this, "Not a current island");
     this->tasks.pushBack(task);
 }
 
-void Island::enqueueExternal(std::function<void()> task) {
+void Island::enqueueExternal2(std::function<void()> task) {
     this->enqueueExternal(*(new FunctorTask<std::function<void()>>(task)));
 }
 
-void Island::enqueueExternal(Task & task) {
+void Island::enqueueExternal2(Task & task) {
     std::unique_lock<std::mutex> lock(this->mutex);
     bool wasEmpty = this->externalTasks.empty();
     this->externalTasks.pushBack(task);

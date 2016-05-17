@@ -4,6 +4,7 @@
 #include <abb/successFwd.h>
 #include <abb/errorFwd.h>
 #include <abb/blockFwd.h>
+#include <abb/reply.h>
 
 #include <abb/ll/brick.h>
 #include <abb/ll/successor.h>
@@ -107,6 +108,7 @@ public:
     typedef ResultT ResultType;
     typedef ReasonT ReasonType;
     typedef BaseBlock<ResultType, ReasonType> BlockType;
+    typedef BaseReply<ResultType, ReasonType> ReplyType;
 
 private:
     typedef ll::BrickPtr<ResultType, ReasonType> BrickPtrType;
@@ -139,8 +141,12 @@ public:
         return this->pipe(std::forward<SuccessContT>(successCont), abb::pass);
     }
 
-    void run() {
-        this->detach();
+    void run(Island & island = Island::current()) {
+        new ll::DetachSuccessor<ResultType, ReasonType, false>(island, this->takeBrick());
+    }
+
+    void runExternal(Island & island) {
+        new ll::DetachSuccessor<ResultType, ReasonType, true>(island, this->takeBrick());
     }
 
 private:
@@ -159,8 +165,6 @@ private:
     private:
         ContT cont;
     };
-
-    void detach();
 
     BrickPtrType takeBrick() {
         ABB_ASSERT(this->brick, "Block is empty");
@@ -260,9 +264,12 @@ auto BaseBlock<ResultT, ReasonT>::pipe(
     ));
 }
 
-template<typename ResultT, typename ReasonT>
-void BaseBlock<ResultT, ReasonT>::detach() {
-    new ll::DetachSuccessor<ResultType, ReasonType>(this->takeBrick());
+inline void enqueue(Island & island, BaseBlock<void(), void()> block) {
+    block.run(island);
+}
+
+inline void enqueueExternal(Island & island, BaseBlock<void(), void()> block) {
+    block.runExternal(island);
 }
 
 } // namespace abb

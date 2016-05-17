@@ -75,23 +75,20 @@ Timer * Timer::currentTimerPtr = nullptr;
 
 typedef abb::Block<void(int)> IntBlock;
 typedef abb::Block<void()> VoidBlock;
+typedef VoidBlock::ReplyType VoidReply;
 
 VoidBlock wait(Duration dur) {
     struct Helpers {
-        static void wait(abb::Island & island, abb::Answer<void()> & answer, Duration dur1) {
-            island.increfExternal();
-            Timer::current().schedule(std::bind(&Helpers::finish, std::ref(island), std::ref(answer)), dur1);
+        static void wait(VoidReply & reply, Duration dur1) {
+            Timer::current().schedule(std::bind(&Helpers::finish, std::ref(reply)), dur1);
         }
 
-        static void finish(abb::Island & island, abb::Answer<void()> & answer) {
-            island.enqueueExternal(std::bind(&abb::Answer<void()>::setResult, &answer));
-            island.decrefExternal();
+        static void finish(VoidReply & reply) {
+            reply.getIsland().enqueueExternal(std::bind(&VoidReply::setResult, &reply));
         }
     };
 
-    abb::Island & island = abb::Island::current();
-
-    return abb::impl<VoidBlock>(std::bind(&Helpers::wait, std::ref(island), std::placeholders::_1, dur));
+    return abb::impl2<VoidBlock>(std::bind(&Helpers::wait, std::placeholders::_1, dur));
 };
 
 IntBlock increment(int val) {
@@ -202,23 +199,21 @@ void doSthWithUniqueInt() {
     abb::success(std::unique_ptr<int>(new int(5))).pipe(&Funs::inc);
 }
 
-/*
-function doSth() {
-    var i = 0;
-
-    return (function go() {
-        return i++ < 5 ? wait(1000).pipe(display.bind(null, "aaa")).pipe(go) : success()
-    })(go);
+VoidBlock doSthWait() {
+    return wait(std::chrono::milliseconds(2000)).pipe([]() {
+        LOG("hello");
+    });
 }
-*/
+
 
 int main() {
     Timer timer;
 
     abb::Island island;
-    island.enqueueExternal(&doSth);
-    island.enqueueExternal(&doSthWithErrors);
-    island.enqueueExternal(&doSthOnErrors);
+    island.enqueueExternal(doSthWait());
+//    island.enqueueExternal(&doSth);
+//    island.enqueueExternal(&doSthWithErrors);
+//    island.enqueueExternal(&doSthOnErrors);
     island.run();
 
     return 0;

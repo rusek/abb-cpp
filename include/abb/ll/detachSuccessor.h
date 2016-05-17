@@ -10,40 +10,49 @@
 namespace abb {
 namespace ll {
 
-template<typename ResultT, typename ReasonT>
+template<typename ResultT, typename ReasonT, bool External>
 class DetachSuccessor : private Successor, private Task {
 public:
-    DetachSuccessor(BrickPtr<ResultT, ReasonT> brick);
+    DetachSuccessor(Island & island, BrickPtr<ResultT, ReasonT> brick);
 
 private:
     virtual void oncomplete();
     virtual Island & getIsland() const;
     virtual void run();
 
+    Island & island;
     BrickPtr<ResultT, ReasonT> brick;
 };
 
-template<typename ResultT, typename ReasonT>
-DetachSuccessor<ResultT, ReasonT>::DetachSuccessor(
+template<typename ResultT, typename ReasonT, bool External>
+DetachSuccessor<ResultT, ReasonT, External>::DetachSuccessor(
+    Island & island,
     BrickPtr<ResultT, ReasonT> brick
 ):
+    island(island),
     brick(std::move(brick))
 {
-    Island::current().enqueue(*this);
+    this->island.increfExternal();
+    if (External) {
+        this->island.enqueueExternal(static_cast<Task&>(*this));
+    } else {
+        this->island.enqueue(static_cast<Task&>(*this));
+    }
 }
 
-template<typename ResultT, typename ReasonT>
-void DetachSuccessor<ResultT, ReasonT>::oncomplete() {
+template<typename ResultT, typename ReasonT, bool External>
+void DetachSuccessor<ResultT, ReasonT, External>::oncomplete() {
+    this->island.decrefExternal();
     delete this;
 }
 
-template<typename ResultT, typename ReasonT>
-Island & DetachSuccessor<ResultT, ReasonT>::getIsland() const {
-    return Island::current();
+template<typename ResultT, typename ReasonT, bool External>
+Island & DetachSuccessor<ResultT, ReasonT, External>::getIsland() const {
+    return this->island;
 }
 
-template<typename ResultT, typename ReasonT>
-void DetachSuccessor<ResultT, ReasonT>::run() {
+template<typename ResultT, typename ReasonT, bool External>
+void DetachSuccessor<ResultT, ReasonT, External>::run() {
     this->brick.run(*this);
 }
 

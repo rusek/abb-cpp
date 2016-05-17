@@ -134,7 +134,7 @@ void ValueBrick<ResultT, ReasonT>::setResult(ArgsT &&... args) {
     this->value.result.init(std::forward<ArgsT>(args)...);
     this->status = SUCCESS;
     if (this->successor) {
-        this->successor->getIsland().enqueue(*this);
+        this->successor->getIsland().enqueue(static_cast<Task&>(*this));
     }
 }
 

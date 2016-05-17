@@ -6,6 +6,7 @@
 #include <abb/block.h>
 #include <abb/error.h>
 #include <abb/success.h>
+#include <abb/impl.h>
 
 namespace abb {
 
@@ -37,7 +38,7 @@ public:
         delete this;
     }
 
-private:
+private:\
     ll::ValueBrick<void(Args...), Und> & brick;
 };
 
