@@ -1,5 +1,5 @@
-#ifndef ABB_BLOCK_FWD
-#define ABB_BLOCK_FWD
+#ifndef ABB_BLOCK_FWD_H
+#define ABB_BLOCK_FWD_H
 
 #include <abb/special.h>
 
@@ -59,4 +59,4 @@ using Block = BaseBlock<internal::NormalizeValue<ResultT>, internal::NormalizeVa
 
 } // namespace abb
 
-#endif // ABB_BLOCK_FWD
+#endif // ABB_BLOCK_FWD_H

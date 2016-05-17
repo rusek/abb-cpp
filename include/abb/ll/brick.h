@@ -1,7 +1,8 @@
 #ifndef ABB_LL_BRICK_H
 #define ABB_LL_BRICK_H
 
-#include <abb/ll/successor.h>
+#include <abb/island.h>
+#include <abb/special.h>
 
 #include <abb/utils/noncopyable.h>
 
@@ -26,6 +27,13 @@ struct ValueToTupleImpl<Und> {
 };
 
 } // namespace internal
+
+class Successor {
+public:
+    virtual ~Successor() {}
+    virtual void oncomplete() = 0;
+    virtual Island & getIsland() const = 0;
+};
 
 enum {
     PENDING = 0,

@@ -106,16 +106,20 @@ void putFive(abb::Reply<int> & answer) {
 
 #define STRING(val) ({ std::stringstream __ss; __ss << val; __ss.str(); })
 
-class DoSthLoop {
+class Countdown {
 public:
-    DoSthLoop(): i(0) {}
+    explicit Countdown(int value): i(value) {}
+
+    ~Countdown() {
+        this->i = 666;
+    }
 
     VoidBlock operator()() {
-        if (this->i++ < 5) {
+        display(STRING("DoSthLoop " << this->i));
+        if (this->i > 0) {
+            this->i--;
             return wait(
-                std::chrono::milliseconds(200)
-            ).pipe(
-                std::bind(&display, STRING("DoSthLoop " << this->i))
+                std::chrono::milliseconds(1000)
             ).pipe(
                 std::ref(*this)
             );
@@ -205,12 +209,11 @@ VoidBlock doSthWait() {
     });
 }
 
-
 int main() {
     Timer timer;
 
     abb::Island island;
-    island.enqueueExternal(doSthWait());
+    island.enqueueExternal(abb::make<Countdown>(10));
 //    island.enqueueExternal(&doSth);
 //    island.enqueueExternal(&doSthWithErrors);
 //    island.enqueueExternal(&doSthOnErrors);

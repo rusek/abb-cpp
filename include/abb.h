@@ -6,6 +6,7 @@
 #include <abb/error.h>
 #include <abb/success.h>
 #include <abb/impl.h>
+#include <abb/make.h>
 
 namespace abb {
 

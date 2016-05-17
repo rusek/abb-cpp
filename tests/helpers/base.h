@@ -29,6 +29,16 @@ private:
 #define HIT() (HitCounter::current().hit())
 #define EXPECT_HITS(num) (HitCounter::current().expectHits(num))
 
+
+#define RUN(...) \
+    do { \
+        LOG("RUN(" << #__VA_ARGS__ << ")"); \
+        HitCounter hitCounter; \
+        abb::Island island; \
+        island.enqueueExternal(__VA_ARGS__); \
+        island.run(); \
+    } while (0)
+
 #define RUN_FUNCTION(func) \
     do { \
         LOG("RUN_FUNCTION(" << #func << ")"); \

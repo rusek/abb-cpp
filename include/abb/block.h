@@ -4,11 +4,11 @@
 #include <abb/successFwd.h>
 #include <abb/errorFwd.h>
 #include <abb/blockFwd.h>
+#include <abb/makeFwd.h>
 #include <abb/reply.h>
 
 #include <abb/ll/brick.h>
-#include <abb/ll/successor.h>
-#include <abb/ll/detachSuccessor.h>
+#include <abb/ll/runner.h>
 #include <abb/ll/pipeBrick.h>
 #include <abb/ll/brickPtr.h>
 #include <abb/ll/abortBrick.h>
@@ -141,21 +141,16 @@ public:
         return this->pipe(std::forward<SuccessContT>(successCont), abb::pass);
     }
 
-    void run(Island & island = Island::current()) {
-        new ll::DetachSuccessor<ResultType, ReasonType, false>(island, this->takeBrick());
-    }
+    void enqueue(Island & island = Island::current());
 
-    void runExternal(Island & island) {
-        new ll::DetachSuccessor<ResultType, ReasonType, true>(island, this->takeBrick());
-    }
+    void enqueueExternal(Island & island);
 
 private:
     template<typename ContT>
     class Unpacker {
     public:
-        template<typename ArgT>
-        explicit Unpacker(ArgT && cont): cont(std::forward<ArgT>(cont)) {}
-        Unpacker(): cont() {}
+        template<typename... ArgsT>
+        explicit Unpacker(ArgsT &&... args): cont(std::forward<ArgsT>(args)...) {}
 
         template<typename... ArgsT>
         BrickPtrType operator()(ArgsT &&... args) {
@@ -175,6 +170,9 @@ private:
 
     template<typename FriendResultT, typename FriendReasonT>
     friend class BaseBlock;
+
+    template<typename FriendFuncT, typename... FriendArgsT>
+    friend internal::MakeReturn<FriendFuncT> make(FriendArgsT &&... args);
 };
 
 template<typename ResultT, typename ReasonT>
@@ -264,12 +262,22 @@ auto BaseBlock<ResultT, ReasonT>::pipe(
     ));
 }
 
+template<typename ResultT, typename ReasonT>
+void BaseBlock<ResultT, ReasonT>::enqueue(Island & island) {
+    ll::enqueue(island, this->takeBrick());
+}
+
+template<typename ResultT, typename ReasonT>
+void BaseBlock<ResultT, ReasonT>::enqueueExternal(Island & island) {
+    ll::enqueue(island, this->takeBrick());
+}
+
 inline void enqueue(Island & island, BaseBlock<void(), void()> block) {
-    block.run(island);
+    block.enqueue(island);
 }
 
 inline void enqueueExternal(Island & island, BaseBlock<void(), void()> block) {
-    block.runExternal(island);
+    block.enqueueExternal(island);
 }
 
 } // namespace abb
