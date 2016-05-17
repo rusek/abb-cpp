@@ -18,7 +18,7 @@ namespace ll {
 namespace internal {
 
 template<typename ResultT, typename ReasonT>
-struct ValueBankImpl2 {
+struct ValueBankImpl {
     union Type {
         void destroy(bool success) {
             if (success) {
@@ -34,7 +34,7 @@ struct ValueBankImpl2 {
 };
 
 template<typename ResultT>
-struct ValueBankImpl2<ResultT, Und> {
+struct ValueBankImpl<ResultT, Und> {
     struct Type {
         void destroy(bool) {
             this->result.destroy();
@@ -45,7 +45,7 @@ struct ValueBankImpl2<ResultT, Und> {
 };
 
 template<typename ReasonT>
-struct ValueBankImpl2<Und, ReasonT> {
+struct ValueBankImpl<Und, ReasonT> {
     struct Type {
         void destroy(bool) {
             this->reason.destroy();
@@ -56,7 +56,7 @@ struct ValueBankImpl2<Und, ReasonT> {
 };
 
 template<typename ResultT, typename ReasonT>
-using ValueToBank2 = typename ValueBankImpl2<ResultT, ReasonT>::Type;
+using ValueToBank = typename ValueBankImpl<ResultT, ReasonT>::Type;
 
 template<typename ResultT, typename ReasonT, typename FuncT>
 class ImplBrick : public Brick<ResultT, ReasonT>, protected Task, protected Reply<ResultT, ReasonT> {
@@ -101,7 +101,7 @@ protected:
     virtual Island & getIsland() const;
 
     FuncT func;
-    internal::ValueToBank2<ResultType, ReasonType> value;
+    internal::ValueToBank<ResultType, ReasonType> value;
     Status status;
     Successor * successor;
 };
