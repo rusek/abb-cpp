@@ -53,7 +53,7 @@ Island & DetachSuccessor<ResultT, ReasonT, External>::getIsland() const {
 
 template<typename ResultT, typename ReasonT, bool External>
 void DetachSuccessor<ResultT, ReasonT, External>::run() {
-    this->brick.run(*this);
+    this->brick.start(*this);
 }
 
 

@@ -26,7 +26,7 @@ public:
         this->status |= ABORT;
     }
 
-    void run(Successor & successor) {
+    void start(Successor & successor) {
         successor.oncomplete();
     }
 

@@ -100,9 +100,9 @@ public:
         }
     }
 
-    void run(Successor & successor) {
+    void start(Successor & successor) {
         this->successor = &successor;
-        this->inBrick.run(*this);
+        this->inBrick.start(*this);
     }
 
     Status getStatus() const {
@@ -149,7 +149,7 @@ void PipeBrick<ResultT, ReasonT, SuccessContT, ErrorContT, AbortContT>::oncomple
     } else {
         this->outBrick = this->contPair.call(this->inBrick);
     }
-    this->outBrick.run(*this->successor);
+    this->outBrick.start(*this->successor);
 }
 
 template<typename ResultT, typename ReasonT, typename SuccessContT, typename ErrorContT, typename AbortContT>

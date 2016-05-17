@@ -15,7 +15,7 @@ typedef void RawValue;
 struct BrickVtable {
     // Base methods
     void (*abort)(RawBrick * brick);
-    void (*run)(RawBrick * brick, Successor & successor);
+    void (*start)(RawBrick * brick, Successor & successor);
     Status (*getStatus)(RawBrick const* brick);
     void (*destroy)(RawBrick * brick);
     // Success-related methods
@@ -43,7 +43,7 @@ struct BrickFuncs {
     }
 
     static void abort(RawBrick * brick);
-    static void run(RawBrick * brick, Successor & successor);
+    static void start(RawBrick * brick, Successor & successor);
     static Status getStatus(RawBrick const* brick);
     static void destroy(RawBrick * brick);
     static RawValue * getResult(RawBrick * brick);
@@ -89,8 +89,8 @@ void BrickFuncs<BrickT>::abort(RawBrick * brick) {
 }
 
 template<typename BrickT>
-void BrickFuncs<BrickT>::run(RawBrick * brick, Successor & successor) {
-    BrickFuncs::fromRaw(brick)->run(successor);
+void BrickFuncs<BrickT>::start(RawBrick * brick, Successor & successor) {
+    BrickFuncs::fromRaw(brick)->start(successor);
 }
 
 template<typename BrickT>
@@ -111,7 +111,7 @@ RawValue * BrickFuncs<BrickT>::getReason(RawBrick * brick) {
 template<typename BrickT>
 const BrickVtable BrickFuncs<BrickT>::vtable = {
     &BrickFuncs::abort,
-    &BrickFuncs::run,
+    &BrickFuncs::start,
     &BrickFuncs::getStatus,
     &BrickFuncs::destroy,
     &BrickFuncs::getResult,
@@ -191,8 +191,8 @@ public:
         this->vtable->abort(this->ptr);
     }
 
-    void run(Successor & successor) {
-        this->vtable->run(this->ptr, successor);
+    void start(Successor & successor) {
+        this->vtable->start(this->ptr, successor);
     }
 
     Status getStatus() const {

@@ -15,7 +15,7 @@ public:
 
     void abort() {}
 
-    void run(Successor & successor) {
+    void start(Successor & successor) {
         successor.oncomplete();
     }
 

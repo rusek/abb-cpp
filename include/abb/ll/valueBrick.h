@@ -73,7 +73,7 @@ public:
         this->status |= ABORT;
     }
 
-    void run(Successor & successor);
+    void start(Successor & successor);
 
     Status getStatus() const {
         return this->status;
@@ -114,7 +114,7 @@ ValueBrick<ResultT, ReasonT>::~ValueBrick() {
 }
 
 template<typename ResultT, typename ReasonT>
-void ValueBrick<ResultT, ReasonT>::run(Successor & successor) {
+void ValueBrick<ResultT, ReasonT>::start(Successor & successor) {
     ABB_ASSERT(!this->successor, "Already got successor");
     this->successor = &successor;
     if (this->status != PENDING) {

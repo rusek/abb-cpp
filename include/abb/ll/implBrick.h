@@ -75,7 +75,7 @@ public:
 
     void abort() {}
 
-    void run(Successor & successor) {
+    void start(Successor & successor) {
         ABB_ASSERT(!this->successor, "Already got successor");
         this->successor = &successor;
         this->func(*static_cast<Reply<ResultT, ReasonT>*>(this));
