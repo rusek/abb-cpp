@@ -3,6 +3,7 @@
 
 #include <abb/reply.h>
 #include <abb/ll/implBrick.h>
+#include <abb/ll/brickPtr.h>
 
 #include <functional>
 

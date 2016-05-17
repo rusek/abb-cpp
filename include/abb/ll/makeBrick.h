@@ -2,6 +2,7 @@
 #define ABB_LL_MAKE_BRICK_H
 
 #include <abb/ll/brick.h>
+#include <abb/ll/brickPtr.h>
 
 namespace abb {
 namespace ll {

@@ -20,4 +20,4 @@ internal::SuccessReturn<BlockT, ArgsT...> success(ArgsT &&... args) {
 
 } // namespace abb
 
-#endif
+#endif // ABB_SUCCESS_H

@@ -1,5 +1,5 @@
-#ifndef ABB_UTILS_H
-#define ABB_UTILS_H
+#ifndef ABB_UTILS_NONCOPYABLE_H
+#define ABB_UTILS_NONCOPYABLE_H
 
 namespace abb {
 namespace utils {
@@ -15,4 +15,4 @@ public:
 } // namespace utils
 } // namespace abb
 
-#endif // ABB_UTILS_H
+#endif // ABB_UTILS_NONCOPYABLE_H

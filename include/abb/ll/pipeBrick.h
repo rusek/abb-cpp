@@ -1,6 +1,11 @@
 #ifndef ABB_LL_PIPE_BRICK_H
 #define ABB_LL_PIPE_BRICK_H
 
+#include <abb/ll/brick.h>
+#include <abb/ll/brickPtr.h>
+
+#include <abb/special.h>
+
 #include <abb/utils/call.h>
 
 #include <type_traits>
