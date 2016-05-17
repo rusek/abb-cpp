@@ -7,13 +7,6 @@
 
 namespace abb {
 
-namespace internal {
-
-template<typename FuncT>
-using MakeReturn = typename std::result_of<FuncT()>::type;
-
-} // namespace internal
-
 template<typename FuncT, typename... ArgsT>
 internal::MakeReturn<FuncT> make(ArgsT &&... args) {
     typedef internal::MakeReturn<FuncT> BlockType;
