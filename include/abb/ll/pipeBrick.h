@@ -125,6 +125,7 @@ public:
 private:
     virtual void oncomplete();
     virtual Island & getIsland() const;
+    virtual bool isAborted() const;
 
     InBrickPtrType inBrick;
     ContPairType contPair;
@@ -160,6 +161,11 @@ void PipeBrick<ResultT, ReasonT, SuccessContT, ErrorContT, AbortContT>::oncomple
 template<typename ResultT, typename ReasonT, typename SuccessContT, typename ErrorContT, typename AbortContT>
 Island & PipeBrick<ResultT, ReasonT, SuccessContT, ErrorContT, AbortContT>::getIsland() const {
     return this->successor->getIsland();
+}
+
+template<typename ResultT, typename ReasonT, typename SuccessContT, typename ErrorContT, typename AbortContT>
+bool PipeBrick<ResultT, ReasonT, SuccessContT, ErrorContT, AbortContT>::isAborted() const {
+    return this->successor->isAborted();
 }
 
 } // namespace ll

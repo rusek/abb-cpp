@@ -2,6 +2,8 @@
 #define ABB_UTILS_DEBUG_H
 
 #include <cstdint>
+#include <iostream>
+#include <cstdlib>
 
 namespace abb {
 namespace utils {
@@ -23,13 +25,6 @@ struct FiascoInfo {
             (msg) \
         }; \
         ::abb::utils::internal::fiasco(__fiascoInfo); \
-    } while (0)
-
-#define ABB_FIASCO_IF(cond, msg) \
-    do { \
-        if (cond) { \
-            ABB_FIASCO(msg); \
-        } \
     } while (0)
 
 #define ABB_ASSERT(cond, msg) \

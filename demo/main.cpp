@@ -80,6 +80,9 @@ typedef VoidBlock::ReplyType VoidReply;
 VoidBlock wait(Duration dur) {
     struct Helpers {
         static void wait(VoidReply & reply, Duration dur1) {
+            if (reply.isAborted()) {
+                LOG("wait reply aborted, continue anyway");
+            }
             Timer::current().schedule(std::bind(&Helpers::finish, std::ref(reply)), dur1);
         }
 

@@ -33,6 +33,7 @@ public:
     virtual ~Successor() {}
     virtual void oncomplete() = 0;
     virtual Island & getIsland() const = 0;
+    virtual bool isAborted() const = 0;
 };
 
 enum {

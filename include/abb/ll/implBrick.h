@@ -99,6 +99,8 @@ protected:
     virtual void run();
 
     virtual Island & getIsland() const;
+    virtual bool isAborted() const;
+    virtual void setAborted();
 
     FuncT func;
     internal::ValueToBank<ResultType, ReasonType> value;
@@ -113,7 +115,22 @@ void ImplBrick<ResultT, ReasonT, FuncT>::run() {
 
 template<typename ResultT, typename ReasonT, typename FuncT>
 Island & ImplBrick<ResultT, ReasonT, FuncT>::getIsland() const {
+    ABB_ASSERT(this->status == PENDING, "Cannot call getIsland after setting a value");
     return this->successor->getIsland();
+}
+
+template<typename ResultT, typename ReasonT, typename FuncT>
+bool ImplBrick<ResultT, ReasonT, FuncT>::isAborted() const {
+    ABB_ASSERT(this->status == PENDING, "Cannot call getIsland after setting a value");
+    return this->successor->isAborted();
+}
+
+template<typename ResultT, typename ReasonT, typename FuncT>
+void ImplBrick<ResultT, ReasonT, FuncT>::setAborted() {
+    ABB_ASSERT(this->status == PENDING, "Already got value");
+    ABB_ASSERT(this->successor->isAborted(), "Abort was not requested");
+    this->status = ABORT;
+    this->successor->getIsland().enqueue(static_cast<Task&>(*this));
 }
 
 template<typename ResultT, typename ReasonT, typename FuncT>

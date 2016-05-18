@@ -19,7 +19,7 @@ for FILE_PATH in include/**/*.h
 do
     echo "TEST $FILE_PATH"
     EXPECTED_GUARD=`getExpectedHeaderGuard "$FILE_PATH"`
-    GUARD_COUNT=`grep "$EXPECTED_GUARD" "$FILE_PATH" | wc -l`
+    GUARD_COUNT=`grep -w "$EXPECTED_GUARD" "$FILE_PATH" | wc -l`
     if [ "$GUARD_COUNT" -ne 3 ]
     then
         echo "Invalid guard, expecting $EXPECTED_GUARD"

@@ -101,6 +101,7 @@ public:
 
 } // namespace internal
 
+using ll::Handle;
 
 template<typename ResultT, typename ReasonT>
 class BaseBlock {
@@ -141,7 +142,7 @@ public:
         return this->pipe(std::forward<SuccessContT>(successCont), abb::pass);
     }
 
-    void enqueue(Island & island = Island::current());
+    Handle enqueue(Island & island = Island::current());
 
     void enqueueExternal(Island & island);
 
@@ -263,17 +264,17 @@ auto BaseBlock<ResultT, ReasonT>::pipe(
 }
 
 template<typename ResultT, typename ReasonT>
-void BaseBlock<ResultT, ReasonT>::enqueue(Island & island) {
-    ll::enqueue(island, this->takeBrick());
+Handle BaseBlock<ResultT, ReasonT>::enqueue(Island & island) {
+    return ll::enqueue(island, this->takeBrick());
 }
 
 template<typename ResultT, typename ReasonT>
 void BaseBlock<ResultT, ReasonT>::enqueueExternal(Island & island) {
-    ll::enqueue(island, this->takeBrick());
+    ll::enqueueExternal(island, this->takeBrick());
 }
 
-inline void enqueue(Island & island, BaseBlock<void(), void()> block) {
-    block.enqueue(island);
+inline Handle enqueue(Island & island, BaseBlock<void(), void()> block) {
+    return block.enqueue(island);
 }
 
 inline void enqueueExternal(Island & island, BaseBlock<void(), void()> block) {

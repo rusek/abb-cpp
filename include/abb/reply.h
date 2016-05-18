@@ -18,8 +18,8 @@ struct Reply {
 
     virtual Island & getIsland() const = 0;
 
-//    virtual bool isAborted() const = 0;
-//    virtual void setAborted() = 0;
+    virtual bool isAborted() const = 0;
+    virtual void setAborted() = 0;
 };
 
 template<typename ResultT, typename ReasonT>
