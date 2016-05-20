@@ -75,7 +75,7 @@ Timer * Timer::currentTimerPtr = nullptr;
 
 typedef abb::Block<void(int)> IntBlock;
 typedef abb::Block<void()> VoidBlock;
-typedef VoidBlock::ReplyType VoidReply;
+typedef abb::GetReply<VoidBlock> VoidReply;
 
 VoidBlock wait(Duration dur) {
     struct Helpers {

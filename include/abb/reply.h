@@ -49,6 +49,9 @@ public:
 template<typename ResultT = Und, typename ReasonT = Und>
 using Reply = BaseReply<NormalizeValue<ResultT>, NormalizeValue<ReasonT>>;
 
+template<typename ArgT>
+using GetReply = BaseReply<GetResult<ArgT>, GetReason<ArgT>>;
+
 } // namespace abb
 
 #endif // ABB_REPLY_H
