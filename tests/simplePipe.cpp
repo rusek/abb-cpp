@@ -23,13 +23,8 @@ private:
 
 typedef abb::Block<IdentityInt&> IdentityIntRefBlock;
 
-template<typename BlockT, bool Ok, typename... ArgsT>
-BlockT value(ArgsT &&... args) {
-    return abb::success<BlockT>(std::forward<ArgsT>(args)...);
-}
-
 template<typename BlockT>
-void testSuccessPiping() {
+VoidBlock testSuccessPiping() {
     EXPECT_HITS(7);
 
     struct Funcs {
@@ -63,7 +58,7 @@ void testSuccessPiping() {
             return abb::success(num);
         }
     };
-    abb::success<BlockT>(7).pipe(
+    return abb::success<BlockT>(7).pipe(
         &Funcs::requireSeven
     ).pipe(
         &Funcs::requireSevenConst
@@ -73,7 +68,7 @@ void testSuccessPiping() {
         &Funcs::requireSevenRval
     ).pipe(&Funcs::inc).pipe(&Funcs::inc).pipe(
         std::bind(&Funcs::require, 9, std::placeholders::_1)
-    ).enqueue();
+    ).pipe(IgnoreResult<BlockT>(), IgnoreReason<BlockT>());
 }
 
 template<typename BlockT>
@@ -81,10 +76,11 @@ class SuccessRefPipingTest {
 public:
     SuccessRefPipingTest(): val(10) {}
 
-    void operator()();
+    VoidBlock operator()();
 
 private:
     BlockT requireTen(IdentityInt & val) {
+        HIT();
         REQUIRE_EQUAL(&val, &this->val);
         REQUIRE_EQUAL(*val, 10);
         return abb::success<IdentityIntRefBlock>(val);
@@ -94,16 +90,17 @@ private:
 };
 
 template<typename BlockT>
-void SuccessRefPipingTest<BlockT>::operator()() {
+VoidBlock SuccessRefPipingTest<BlockT>::operator()() {
+    EXPECT_HITS(1);
     BlockT block(abb::success(std::ref(this->val)));
 
-    block.pipe(
+    return block.pipe(
         std::bind(&SuccessRefPipingTest::requireTen, this, std::placeholders::_1)
-    ).enqueue();
+    ).pipe(IgnoreResult<BlockT>(), IgnoreReason<BlockT>());
 }
 
 template<typename BlockT>
-void testErrorPiping() {
+VoidBlock testErrorPiping() {
     EXPECT_HITS(4);
 
     struct Funcs {
@@ -128,7 +125,7 @@ void testErrorPiping() {
             return abb::error(num);
         }
     };
-    abb::error<BlockT>(7).pipe(
+    return abb::error<BlockT>(7).pipe(
         abb::pass,
         &Funcs::requireSeven
     ).pipe(
@@ -140,7 +137,7 @@ void testErrorPiping() {
     ).pipe(
         abb::pass,
         &Funcs::requireSevenRval
-    ).enqueue();
+    ).pipe(IgnoreResult<BlockT>(), IgnoreReason<BlockT>());
 }
 
 template<typename BlockT>
@@ -148,10 +145,11 @@ class ErrorRefPipingTest {
 public:
     ErrorRefPipingTest(): val(10) {}
 
-    void operator()();
+    VoidBlock operator()();
 
 private:
      BlockT requireTen(IdentityInt & val) {
+        HIT();
         REQUIRE_EQUAL(&val, &this->val);
         REQUIRE_EQUAL(*val, 10);
         return abb::error(std::ref(val));
@@ -161,26 +159,55 @@ private:
 };
 
 template<typename BlockT>
-void ErrorRefPipingTest<BlockT>::operator()() {
-    abb::error<BlockT>(this->val).pipe(
+VoidBlock ErrorRefPipingTest<BlockT>::operator()() {
+    EXPECT_HITS(2);
+    return abb::error<BlockT>(this->val).pipe(
         abb::pass,
         std::bind(&ErrorRefPipingTest::requireTen, this, std::placeholders::_1)
     ).pipe(
         abb::pass,
         std::bind(&ErrorRefPipingTest::requireTen, this, std::placeholders::_1)
-    ).enqueue();
+    ).pipe(IgnoreResult<BlockT>(), IgnoreReason<BlockT>());
+}
+
+abb::VoidBlock testNestedSuccessPiping() {
+    EXPECT_HITS(3);
+
+    return abb::success(10).pipe([](int i) {
+        HIT();
+        REQUIRE_EQUAL(i, 10);
+        return abb::success(20).pipe([](int i) {
+            HIT();
+            REQUIRE_EQUAL(i, 20);
+            return abb::success(30);
+        });
+    }).pipe([](int i) {
+        HIT();
+        REQUIRE_EQUAL(i, 30);
+    });
+}
+
+abb::VoidBlock testPipeForwarding() {
+    EXPECT_HITS(1);
+    return abb::success().pipe([]() {
+        return abb::success().pipe([]() {});
+    }).pipe(abb::pass).pipe([]() {
+        HIT();
+    });
 }
 
 int main() {
     RUN_FUNCTION(testSuccessPiping<IntBlock>);
-    RUN_FUNCTION(ARG(testSuccessPiping<abb::Block<int, void>>));
-    RUN_FUNCTION(ARG(testSuccessPiping<abb::Block<int, std::string>>));
+    RUN_FUNCTION(testSuccessPiping<abb::Block<int, void>>);
+    RUN_FUNCTION(testSuccessPiping<abb::Block<int, std::string>>);
     RUN_CLASS(SuccessRefPipingTest<IdentityIntRefBlock>);
-    RUN_CLASS(ARG(SuccessRefPipingTest<abb::Block<IdentityInt&, void>>));
-    RUN_FUNCTION(ARG(testErrorPiping<abb::ErrorBlock<int>>));
-    RUN_FUNCTION(ARG(testErrorPiping<abb::Block<void, int>>));
-    RUN_FUNCTION(ARG(testErrorPiping<abb::Block<int, int>>));
-    RUN_CLASS(ARG(ErrorRefPipingTest<abb::Block<abb::Und, IdentityInt&>>));
-    RUN_CLASS(ARG(ErrorRefPipingTest<abb::Block<IdentityInt&, IdentityInt&>>));
+    RUN_CLASS(SuccessRefPipingTest<abb::Block<IdentityInt&, void>>);
+    RUN_FUNCTION(testErrorPiping<abb::ErrorBlock<int>>);
+    RUN_FUNCTION(testErrorPiping<abb::Block<void, int>>);
+    RUN_FUNCTION(testErrorPiping<abb::Block<int, int>>);
+    RUN_CLASS(ErrorRefPipingTest<abb::Block<abb::Und, IdentityInt&>>);
+    RUN_CLASS(ErrorRefPipingTest<abb::Block<IdentityInt&, IdentityInt&>>);
+    RUN_FUNCTION(testNestedSuccessPiping);
+    RUN_FUNCTION(testPipeForwarding);
     return 0;
 }
