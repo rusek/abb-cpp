@@ -9,7 +9,6 @@ namespace ll {
 
 namespace internal {
 
-typedef void RawBrick;
 typedef void RawValue;
 
 struct BrickVtable {
@@ -126,12 +125,14 @@ public:
     typedef ResultT ResultType;
     typedef ReasonT ReasonType;
 
-    BrickPtr(): vtable(nullptr), ptr(nullptr) {}
+    BrickPtr(): ptr(nullptr) {}
 
     template<typename BrickT>
     explicit BrickPtr(BrickT * brick):
-        vtable(&internal::BrickFuncs<BrickT>::vtable),
-        ptr(internal::BrickFuncs<BrickT>::toRaw(brick)) {}
+        ptr(internal::BrickFuncs<BrickT>::toRaw(brick))
+    {
+        this->ptr->vtable = &internal::BrickFuncs<BrickT>::vtable;
+    }
 
     BrickPtr(BrickPtr const&) = delete;
 
@@ -143,10 +144,8 @@ public:
             IsValueSubstitutable<ReasonT, OtherReasonT>::value
         >::type* = nullptr
     > BrickPtr(BrickPtr<OtherResultT, OtherReasonT> && other):
-        vtable(other.vtable),
         ptr(other.ptr)
     {
-        other.vtable = nullptr;
         other.ptr = nullptr;
     }
 
@@ -161,18 +160,16 @@ public:
         >::type* = nullptr
     > BrickPtr & operator=(BrickPtr<OtherResultT, OtherReasonT> && other) {
         if (this->ptr) {
-            this->vtable->destroy(this->ptr);
+            this->ptr->vtable->destroy(this->ptr);
         }
-        this->vtable = other.vtable;
         this->ptr = other.ptr;
-        other.vtable = nullptr;
         other.ptr = nullptr;
         return *this;
     }
 
     ~BrickPtr() {
         if (this->ptr) {
-            this->vtable->destroy(this->ptr);
+            this->ptr->vtable->destroy(this->ptr);
         }
     }
 
@@ -181,31 +178,29 @@ public:
     }
 
     void abort() {
-        this->vtable->abort(this->ptr);
+        this->ptr->vtable->abort(this->ptr);
     }
 
     void start(Successor & successor) {
-        this->vtable->start(this->ptr, successor);
+        this->ptr->vtable->start(this->ptr, successor);
     }
 
     Status getStatus() const {
-        return this->vtable->getStatus(this->ptr);
+        return this->ptr->vtable->getStatus(this->ptr);
     }
 
     ValueToTuple<ResultT> & getResult() {
-        return *internal::ValueFuncs<ResultT>::fromRaw(this->vtable->getResult(this->ptr));
+        return *internal::ValueFuncs<ResultT>::fromRaw(this->ptr->vtable->getResult(this->ptr));
     }
 
     ValueToTuple<ReasonT> & getReason() {
-        return *internal::ValueFuncs<ReasonT>::fromRaw(this->vtable->getReason(this->ptr));
+        return *internal::ValueFuncs<ReasonT>::fromRaw(this->ptr->vtable->getReason(this->ptr));
     }
 
 private:
-    BrickPtr(internal::BrickVtable const* vtable, internal::RawBrick * ptr):
-        vtable(vtable),
+    explicit BrickPtr(internal::RawBrick * ptr):
         ptr(ptr) {}
 
-    internal::BrickVtable const* vtable;
     internal::RawBrick * ptr;
 
     template<typename FriendResultT, typename FriendReasonT>
@@ -221,21 +216,17 @@ private:
 template<typename ResultT, typename ReasonT>
 inline BrickPtr<ResultT, Und> successCast(BrickPtr<ResultT, ReasonT> && brick) {
     ABB_ASSERT(brick.getStatus() & SUCCESS, "Expected success");
-    internal::BrickVtable const* vtable = brick.vtable;
     internal::RawBrick * ptr = brick.ptr;
-    brick.vtable = nullptr;
     brick.ptr = nullptr;
-    return BrickPtr<ResultT, Und>(vtable, ptr);
+    return BrickPtr<ResultT, Und>(ptr);
 }
 
 template<typename ResultT, typename ReasonT>
 inline BrickPtr<Und, ReasonT> errorCast(BrickPtr<ResultT, ReasonT> && brick) {
     ABB_ASSERT(brick.getStatus() & ERROR, "Expected error");
-    internal::BrickVtable const* vtable = brick.vtable;
     internal::RawBrick * ptr = brick.ptr;
-    brick.vtable = nullptr;
     brick.ptr = nullptr;
-    return BrickPtr<Und, ReasonT>(vtable, ptr);
+    return BrickPtr<Und, ReasonT>(ptr);
 }
 
 template<typename ArgT>

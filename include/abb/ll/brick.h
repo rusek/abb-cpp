@@ -13,6 +13,8 @@ namespace ll {
 
 namespace internal {
 
+struct BrickVtable;
+
 template<typename ValueT>
 struct ValueToTupleImpl {};
 
@@ -25,6 +27,14 @@ template<>
 struct ValueToTupleImpl<Und> {
     typedef Und Type;
 };
+
+class RawBrick : private utils::Noncopyable {
+public:
+    internal::BrickVtable const* vtable;
+};
+
+template<typename FriendBrickT>
+class BrickFuncs;
 
 } // namespace internal
 
@@ -49,9 +59,15 @@ template<typename ValueT>
 using ValueToTuple = typename internal::ValueToTupleImpl<ValueT>::Type;
 
 template<typename ResultT, typename ReasonT>
-struct Brick : private utils::Noncopyable {
+struct Brick : private internal::RawBrick {
     typedef ResultT ResultType;
     typedef ReasonT ReasonType;
+
+    template<typename FriendResultT, typename FriendReasonT>
+    friend class BrickPtr;
+
+    template<typename FriendBrickT>
+    friend class internal::BrickFuncs;
 };
 
 } // namespace ll
