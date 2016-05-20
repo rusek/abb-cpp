@@ -11,8 +11,8 @@ template<typename FuncT, typename... ArgsT>
 internal::MakeReturn<FuncT> make(ArgsT &&... args) {
     typedef internal::MakeReturn<FuncT> BlockType;
     typedef ll::MakeBrick<
-        typename BlockType::ResultType,
-        typename BlockType::ReasonType,
+        GetResult<BlockType>,
+        GetReason<BlockType>,
         typename BlockType::template Unpacker<FuncT>
     > MakeBrickType;
 

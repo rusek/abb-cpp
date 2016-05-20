@@ -52,8 +52,8 @@ struct BrickFuncs {
     static const BrickVtable vtable;
 
 private:
-    typedef IsDefined<typename BrickT::ResultType> ResultDefined;
-    typedef IsDefined<typename BrickT::ReasonType> ReasonDefined;
+    typedef IsUnd<GetResult<BrickT>> IsResultUnd;
+    typedef IsUnd<GetReason<BrickT>> IsReasonUnd;
 
     static BrickT * fromRaw(RawBrick * brick) {
         return static_cast<BrickT*>(brick);
@@ -63,17 +63,17 @@ private:
         return static_cast<BrickT const*>(brick);
     }
 
-    static RawValue * getResult(RawBrick * brick, std::true_type) {
-        return ValueFuncs<typename BrickT::ResultType>::toRaw(&BrickFuncs::fromRaw(brick)->getResult());
+    static RawValue * getResult(RawBrick * brick, std::false_type) {
+        return ValueFuncs<GetResult<BrickT>>::toRaw(&BrickFuncs::fromRaw(brick)->getResult());
     }
-    static RawValue * getResult(RawBrick *, std::false_type) {
+    static RawValue * getResult(RawBrick *, std::true_type) {
         ABB_FIASCO("Erased method called");
     }
 
-    static RawValue * getReason(RawBrick * brick, std::true_type) {
-        return ValueFuncs<typename BrickT::ReasonType>::toRaw(&BrickFuncs::fromRaw(brick)->getReason());
+    static RawValue * getReason(RawBrick * brick, std::false_type) {
+        return ValueFuncs<GetReason<BrickT>>::toRaw(&BrickFuncs::fromRaw(brick)->getReason());
     }
-    static RawValue * getReason(RawBrick *, std::false_type) {
+    static RawValue * getReason(RawBrick *, std::true_type) {
         ABB_FIASCO("Erased method called");
     }
 };
@@ -100,12 +100,12 @@ Status BrickFuncs<BrickT>::getStatus(RawBrick const* brick) {
 
 template<typename BrickT>
 RawValue * BrickFuncs<BrickT>::getResult(RawBrick * brick) {
-    return BrickFuncs::getResult(brick, ResultDefined());
+    return BrickFuncs::getResult(brick, IsResultUnd());
 }
 
 template<typename BrickT>
 RawValue * BrickFuncs<BrickT>::getReason(RawBrick * brick) {
-    return BrickFuncs::getReason(brick, ReasonDefined());
+    return BrickFuncs::getReason(brick, IsReasonUnd());
 }
 
 template<typename BrickT>
@@ -117,13 +117,6 @@ const BrickVtable BrickFuncs<BrickT>::vtable = {
     &BrickFuncs::getResult,
     &BrickFuncs::getReason
 };
-
-template<typename ValueT, typename OtherValueT>
-struct IsValueSubstitutable : std::integral_constant<
-    bool,
-    std::is_same<ValueT, OtherValueT>::value ||
-        std::is_same<OtherValueT, Und>::value
-> {};
 
 } // namespace internal
 
@@ -146,8 +139,8 @@ public:
         typename OtherResultT,
         typename OtherReasonT,
         typename std::enable_if<
-            internal::IsValueSubstitutable<ResultT, OtherResultT>::value &&
-            internal::IsValueSubstitutable<ReasonT, OtherReasonT>::value
+            IsValueSubstitutable<ResultT, OtherResultT>::value &&
+            IsValueSubstitutable<ReasonT, OtherReasonT>::value
         >::type* = nullptr
     > BrickPtr(BrickPtr<OtherResultT, OtherReasonT> && other):
         vtable(other.vtable),
@@ -163,8 +156,8 @@ public:
         typename OtherResultT,
         typename OtherReasonT,
         typename std::enable_if<
-            internal::IsValueSubstitutable<ResultT, OtherResultT>::value &&
-            internal::IsValueSubstitutable<ReasonT, OtherReasonT>::value
+            IsValueSubstitutable<ResultT, OtherResultT>::value &&
+            IsValueSubstitutable<ReasonT, OtherReasonT>::value
         >::type* = nullptr
     > BrickPtr & operator=(BrickPtr<OtherResultT, OtherReasonT> && other) {
         if (this->ptr) {
@@ -208,29 +201,56 @@ public:
     }
 
 private:
+    BrickPtr(internal::BrickVtable const* vtable, internal::RawBrick * ptr):
+        vtable(vtable),
+        ptr(ptr) {}
+
     internal::BrickVtable const* vtable;
     internal::RawBrick * ptr;
 
-    template<typename OtherResultT, typename OtherReasonT>
+    template<typename FriendResultT, typename FriendReasonT>
     friend class BrickPtr;
+
+    template<typename FriendResultT, typename FriendReasonT>
+    friend BrickPtr<FriendResultT, Und> successCast(BrickPtr<FriendResultT, FriendReasonT> && brick);
+
+    template<typename FriendResultT, typename FriendReasonT>
+    friend BrickPtr<Und, FriendReasonT> errorCast(BrickPtr<FriendResultT, FriendReasonT> && brick);
 };
 
-namespace internal {
-
-template<typename BrickT>
-using BrickToPtr = BrickPtr<typename BrickT::ResultType, typename BrickT::ReasonType>;
-
-} // namespace internal
-
-template<typename BrickT>
-inline internal::BrickToPtr<BrickT> makeBrickPtr(BrickT * raw) {
-    return internal::BrickToPtr<BrickT>(raw);
+template<typename ResultT, typename ReasonT>
+inline BrickPtr<ResultT, Und> successCast(BrickPtr<ResultT, ReasonT> && brick) {
+    ABB_ASSERT(brick.getStatus() & SUCCESS, "Expected success");
+    internal::BrickVtable const* vtable = brick.vtable;
+    internal::RawBrick * ptr = brick.ptr;
+    brick.vtable = nullptr;
+    brick.ptr = nullptr;
+    return BrickPtr<ResultT, Und>(vtable, ptr);
 }
+
+template<typename ResultT, typename ReasonT>
+inline BrickPtr<Und, ReasonT> errorCast(BrickPtr<ResultT, ReasonT> && brick) {
+    ABB_ASSERT(brick.getStatus() & ERROR, "Expected error");
+    internal::BrickVtable const* vtable = brick.vtable;
+    internal::RawBrick * ptr = brick.ptr;
+    brick.vtable = nullptr;
+    brick.ptr = nullptr;
+    return BrickPtr<Und, ReasonT>(vtable, ptr);
+}
+
+template<typename ArgT>
+using GetBrickPtr = BrickPtr<GetResult<ArgT>, GetReason<ArgT>>;
 
 template<typename BrickT, typename... ArgsT>
-inline internal::BrickToPtr<BrickT> makeBrick(ArgsT &&... args) {
-    return internal::BrickToPtr<BrickT>(new BrickT(std::forward<ArgsT>(args)...));
+inline GetBrickPtr<BrickT> makeBrick(ArgsT &&... args) {
+    return GetBrickPtr<BrickT>(new BrickT(std::forward<ArgsT>(args)...));
 }
+
+template<typename FirstPtrT, typename SecondPtrT>
+using UnifyBrickPtrs = BrickPtr<
+    UnifyValues<GetResult<FirstPtrT>, GetResult<SecondPtrT>>,
+    UnifyValues<GetReason<FirstPtrT>, GetReason<SecondPtrT>>
+>;
 
 } // namespace ll
 } // namespace abb

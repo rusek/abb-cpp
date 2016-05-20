@@ -3,8 +3,9 @@
 
 #include <abb/ll/brick.h>
 #include <abb/ll/brickPtr.h>
+#include <abb/ll/brickCont.h>
 
-#include <abb/special.h>
+#include <abb/value.h>
 
 #include <abb/utils/call.h>
 
@@ -16,86 +17,40 @@ namespace ll {
 namespace internal {
 
 template<typename ResultT, typename ReasonT, typename SuccessContT, typename ErrorContT>
-class ContPair :
-    public ContPair<ResultT, Und, SuccessContT, Und>,
-    public ContPair<Und, ReasonT, Und, ErrorContT>
-{
-private:
-    typedef ContPair<ResultT, Und, SuccessContT, Und> SuccessBase;
-    typedef ContPair<Und, ReasonT, Und, ErrorContT> ErrorBase;
-
-public:
-    typedef typename SuccessBase::BrickPtrType BrickPtrType;
-    typedef typename SuccessBase::BrickType BrickType;
-    static_assert(
-        std::is_same<BrickPtrType, typename ErrorBase::BrickPtrType>::value,
-        "Continuations should return same brick type"
-    );
-
-    ContPair(SuccessContT successCont, ErrorContT errorCont):
-        SuccessBase(successCont, Und()),
-        ErrorBase(Und(), errorCont) {}
-
-    BrickPtrType call(BrickPtr<ResultT, ReasonT> & inBrick) {
-        return inBrick.getStatus() & SUCCESS ?
-            this->SuccessBase::call(inBrick) :
-            this->ErrorBase::call(inBrick);
-    }
-};
-
-template<typename... ResultArgsT, typename SuccessContT>
-class ContPair<void(ResultArgsT...), Und, SuccessContT, Und> {
-public:
-    typedef typename std::result_of<SuccessContT(ResultArgsT...)>::type BrickPtrType;
-    typedef Brick<typename BrickPtrType::ResultType, typename BrickPtrType::ReasonType> BrickType;
-
-    ContPair(SuccessContT successCont, Und): successCont(std::move(successCont)) {}
-
-    template<typename ReasonT>
-    BrickPtrType call(BrickPtr<void(ResultArgsT...), ReasonT> & inBrick) {
-        return utils::call(this->successCont, std::move(inBrick.getResult()));
-    }
-
-private:
-    SuccessContT successCont;
-};
-
-template<typename... ReasonArgsT, typename ErrorContT>
-class ContPair<Und, void(ReasonArgsT...), Und, ErrorContT> {
-public:
-    typedef typename std::result_of<ErrorContT(ReasonArgsT...)>::type BrickPtrType;
-    typedef Brick<typename BrickPtrType::ResultType, typename BrickPtrType::ReasonType> BrickType;
-
-    ContPair(Und, ErrorContT errorCont): errorCont(std::move(errorCont)) {}
-
-    template<typename ResultT>
-    BrickPtrType call(BrickPtr<ResultT, void(ReasonArgsT...)> & inBrick) {
-        return utils::call(this->errorCont, std::move(inBrick.getReason()));
-    }
-
-private:
-    ErrorContT errorCont;
+struct PipeTraits {
+    typedef BrickCont<ResultT, ReasonT, SuccessContT, ErrorContT> BrickContType;
+    typedef typename BrickContType::InBrickPtrType InBrickPtrType;
+    typedef typename BrickContType::OutBrickPtrType OutBrickPtrType;
+    typedef Brick<GetResult<OutBrickPtrType>, GetReason<OutBrickPtrType>> BrickBaseType;
 };
 
 } // namespace internal
 
 template<typename ResultT, typename ReasonT, typename SuccessContT, typename ErrorContT, typename AbortContT>
 class PipeBrick :
-    public internal::ContPair<ResultT, ReasonT, SuccessContT, ErrorContT>::BrickType,
+    public internal::PipeTraits<ResultT, ReasonT, SuccessContT, ErrorContT>::BrickBaseType,
     private Successor
 {
 private:
-    typedef BrickPtr<ResultT, ReasonT> InBrickPtrType;
-    typedef internal::ContPair<ResultT, ReasonT, SuccessContT, ErrorContT> ContPairType;
-    typedef typename ContPairType::BrickPtrType BrickPtrType;
+    typedef internal::PipeTraits<ResultT, ReasonT, SuccessContT, ErrorContT> Traits;
+    typedef typename Traits::InBrickPtrType InBrickPtrType;
+    typedef typename Traits::OutBrickPtrType OutBrickPtrType;
+    typedef typename Traits::BrickContType BrickContType;
 
 public:
+    template<typename SuccessArg, typename ErrorArg>
     PipeBrick(
         InBrickPtrType inBrick,
-        SuccessContT successCont,
-        ErrorContT errorCont,
+        SuccessArg && successArg,
+        ErrorArg && errorArg,
         AbortContT abortCont
-    );
+    ):
+        inBrick(std::move(inBrick)),
+        brickCont(std::forward<SuccessArg>(successArg), std::forward<ErrorArg>(errorArg)),
+        abortCont(std::move(abortCont)),
+        successor(nullptr)
+    {
+    }
 
     void abort() {
         if (this->outBrick) {
@@ -114,11 +69,11 @@ public:
         return this->outBrick ? this->outBrick.getStatus() : PENDING;
     }
 
-    ValueToTuple<typename BrickPtrType::ResultType> & getResult() {
+    ValueToTuple<GetResult<OutBrickPtrType>> & getResult() {
         return this->outBrick.getResult();
     }
 
-    ValueToTuple<typename BrickPtrType::ReasonType> & getReason() {
+    ValueToTuple<GetReason<OutBrickPtrType>> & getReason() {
         return this->outBrick.getReason();
     }
 
@@ -128,34 +83,26 @@ private:
     virtual bool isAborted() const;
 
     InBrickPtrType inBrick;
-    ContPairType contPair;
+    BrickContType brickCont;
     AbortContT abortCont;
-    BrickPtr<typename BrickPtrType::ResultType, typename BrickPtrType::ReasonType> outBrick;
+    OutBrickPtrType outBrick;
     Successor * successor;
 };
-
-template<typename ResultT, typename ReasonT, typename SuccessContT, typename ErrorContT, typename AbortContT>
-PipeBrick<ResultT, ReasonT, SuccessContT, ErrorContT, AbortContT>::PipeBrick(
-    InBrickPtrType inBrick,
-    SuccessContT successCont,
-    ErrorContT errorCont,
-    AbortContT abortCont
-):
-    inBrick(std::move(inBrick)),
-    contPair(std::move(successCont), std::move(errorCont)),
-    abortCont(std::move(abortCont)),
-    successor(nullptr)
-{
-}
 
 template<typename ResultT, typename ReasonT, typename SuccessContT, typename ErrorContT, typename AbortContT>
 void PipeBrick<ResultT, ReasonT, SuccessContT, ErrorContT, AbortContT>::oncomplete() {
     if (this->inBrick.getStatus() & ABORT) {
         this->outBrick = this->abortCont();
     } else {
-        this->outBrick = this->contPair.call(this->inBrick);
+        this->outBrick = this->brickCont(std::move(this->inBrick));
     }
-    this->outBrick.start(*this->successor);
+
+    if (this->outBrick.getStatus() == PENDING) {
+        this->outBrick.start(*this->successor);
+    } else {
+        // this->brickCont returned this->inBrick as this->outBrick
+        this->successor->oncomplete();
+    }
 }
 
 template<typename ResultT, typename ReasonT, typename SuccessContT, typename ErrorContT, typename AbortContT>

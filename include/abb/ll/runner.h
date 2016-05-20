@@ -4,7 +4,7 @@
 #include <abb/ll/brick.h>
 #include <abb/ll/brickPtr.h>
 
-#include <abb/special.h>
+#include <abb/value.h>
 
 namespace abb {
 namespace ll {

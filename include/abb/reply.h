@@ -47,7 +47,7 @@ public:
 };
 
 template<typename ResultT = Und, typename ReasonT = Und>
-using Reply = BaseReply<internal::NormalizeValue<ResultT>, internal::NormalizeValue<ReasonT>>;
+using Reply = BaseReply<NormalizeValue<ResultT>, NormalizeValue<ReasonT>>;
 
 } // namespace abb
 

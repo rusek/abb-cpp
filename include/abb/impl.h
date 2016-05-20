@@ -12,7 +12,7 @@ namespace abb {
 template<typename BlockT, typename FuncT>
 BlockT impl(FuncT && func) {
     typedef typename std::decay<FuncT>::type FuncD;
-    typedef ll::ImplBrick<typename BlockT::ResultType, typename BlockT::ReasonType, FuncD> ImplBrickType;
+    typedef ll::ImplBrick<GetResult<BlockT>, GetReason<BlockT>, FuncD> ImplBrickType;
 
     return BlockT(ll::makeBrick<ImplBrickType>(std::forward<FuncT>(func)));
 }

@@ -2,7 +2,7 @@
 #define ABB_LL_BRICK_H
 
 #include <abb/island.h>
-#include <abb/special.h>
+#include <abb/value.h>
 
 #include <abb/utils/noncopyable.h>
 

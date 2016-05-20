@@ -23,80 +23,38 @@ namespace abb {
 
 namespace internal {
 
-template<typename ContT, typename ReturnT, typename... ArgsT>
-struct ContTraitsWithReturn {
-    typedef ReturnT BlockType;
-    typedef ContT ContType;
+template<typename ValueT, typename ContT, typename ReturnT>
+struct CoerceContImpl {
+    typedef ContT Type;
 };
 
-template<typename ContT, typename... ArgsT>
-struct ContTraits : ContTraitsWithReturn<ContT, typename std::result_of<ContT(ArgsT...)>::type, ArgsT...> {};
+template<typename ValueT, typename ContT>
+struct PrepareRegularContImpl {};
 
-template<typename BlockT, typename SuccessContT, typename ErrorContT>
-struct BlockContTraits {};
+template<typename... ArgsT, typename ContT>
+struct PrepareRegularContImpl<void(ArgsT...), ContT> {
+    typedef typename CoerceContImpl<
+        void(ArgsT...),
+        ContT,
+        typename std::result_of<ContT(ArgsT...)>::type
+    >::Type CoercedContType;
 
-template<typename... ResultArgsT, typename SuccessContT>
-class BlockContTraits<BaseBlock<void(ResultArgsT...), Und>, SuccessContT, Pass> {
-private:
-    typedef ContTraits<SuccessContT, ResultArgsT...> SuccessContTraits;
-public:
-    typedef typename SuccessContTraits::BlockType BlockType;
-    typedef typename SuccessContTraits::ContType SuccessContType;
-    typedef Und ErrorContType;
+    typedef typename std::result_of<CoercedContType(ArgsT...)>::type BlockType;
+    typedef typename BlockType::template Unpacker<CoercedContType> Type;
 };
 
-template<typename... ReasonArgsT, typename ErrorContT>
-class BlockContTraits<BaseBlock<Und, void(ReasonArgsT...)>, Pass, ErrorContT> {
-private:
-    typedef ContTraits<ErrorContT, ReasonArgsT...> ErrorContTraits;
-public:
-    typedef typename ErrorContTraits::BlockType BlockType;
-    typedef Und SuccessContType;
-    typedef typename ErrorContTraits::ContType ErrorContType;
+template<typename ValueT, typename ContT>
+struct PrepareContImpl : PrepareRegularContImpl<ValueT, ContT> {
 };
 
-template<typename... ResultArgsT, typename... ReasonArgsT, typename SuccessContT>
-class BlockContTraits<BaseBlock<void(ResultArgsT...), void(ReasonArgsT...)>, SuccessContT, Pass> {
-private:
-    typedef ContTraits<SuccessContT, ResultArgsT...> SuccessContTraits;
-public:
-    typedef typename SuccessContTraits::BlockType BlockType;
-    typedef typename SuccessContTraits::ContType SuccessContType;
-    struct ErrorContType {
-        BlockType operator()(ReasonArgsT &&... args) {
-            return error<BlockType>(std::forward<ReasonArgsT>(args)...);
-        }
-    };
+template<typename ValueT>
+struct PrepareContImpl<ValueT, Pass> {
+    typedef Pass Type;
 };
 
-template<typename... ResultArgsT, typename... ReasonArgsT, typename ErrorContT>
-class BlockContTraits<BaseBlock<void(ResultArgsT...), void(ReasonArgsT...)>, Pass, ErrorContT> {
-private:
-    typedef ContTraits<ErrorContT, ReasonArgsT...> ErrorContTraits;
-public:
-    typedef typename ErrorContTraits::BlockType BlockType;
-    struct SuccessContType {
-        BlockType operator()(ResultArgsT &&... args) {
-            return success<BlockType>(std::forward<ResultArgsT>(args)...);
-        }
-    };
-    typedef typename ErrorContTraits::ContType ErrorContType;
-};
-
-template<typename... ResultArgsT, typename... ReasonArgsT, typename SuccessContT, typename ErrorContT>
-class BlockContTraits<BaseBlock<void(ResultArgsT...), void(ReasonArgsT...)>, SuccessContT, ErrorContT> {
-private:
-    typedef ContTraits<SuccessContT, ResultArgsT...> SuccessContTraits;
-    typedef ContTraits<ErrorContT, ReasonArgsT...> ErrorContTraits;
-public:
-    typedef typename SuccessContTraits::BlockType BlockType;
-    static_assert(
-        std::is_same<BlockType, typename ErrorContTraits::BlockType>::value,
-        "Blocks returned by continuations are of different types"
-    );
-
-    typedef typename SuccessContTraits::ContType SuccessContType;
-    typedef typename ErrorContTraits::ContType ErrorContType;
+template<typename ValueT>
+struct PrepareContImpl<ValueT, Und> {
+    typedef Und Type;
 };
 
 } // namespace internal
@@ -105,16 +63,26 @@ using ll::Handle;
 
 template<typename ResultT, typename ReasonT>
 class BaseBlock {
+private:
+    typedef ll::BrickPtr<ResultT, ReasonT> BrickPtrType;
+
+    template<typename SuccessContT, typename ErrorContT>
+    struct PipeTraits {
+        typedef typename internal::PrepareContImpl<ResultT, SuccessContT>::Type SuccessContType;
+        typedef typename internal::PrepareContImpl<ReasonT, ErrorContT>::Type ErrorContType;
+        struct AbortContType {
+            ll::BrickPtr<Und, Und> operator()() {
+                return ll::makeBrick<ll::AbortBrick>();
+            }
+        };
+        typedef ll::PipeBrick<ResultT, ReasonT, SuccessContType, ErrorContType, AbortContType> PipeBrickType;
+        typedef GetBlock<PipeBrickType> OutBlockType;
+    };
+
 public:
     typedef ResultT ResultType;
     typedef ReasonT ReasonType;
-    typedef BaseBlock<ResultType, ReasonType> BlockType;
-    typedef BaseReply<ResultType, ReasonType> ReplyType;
 
-private:
-    typedef ll::BrickPtr<ResultType, ReasonType> BrickPtrType;
-
-public:
     explicit BaseBlock(BrickPtrType brick);
 
     template<typename OtherResultT, typename OtherReasonT>
@@ -127,18 +95,16 @@ public:
     }
 
     template<typename SuccessContT, typename ErrorContT>
-    typename internal::BlockContTraits<
-        BlockType,
+    typename PipeTraits<
         typename std::decay<SuccessContT>::type,
         typename std::decay<ErrorContT>::type
-    >::BlockType pipe(SuccessContT && successCont, ErrorContT && errorCont);
+    >::OutBlockType pipe(SuccessContT && successCont, ErrorContT && errorCont);
 
     template<typename SuccessContT>
-    typename internal::BlockContTraits<
-        BlockType,
+    typename PipeTraits<
         typename std::decay<SuccessContT>::type,
         Pass
-    >::BlockType pipe(SuccessContT && successCont) {
+    >::OutBlockType pipe(SuccessContT && successCont) {
         return this->pipe(std::forward<SuccessContT>(successCont), abb::pass);
     }
 
@@ -174,6 +140,9 @@ private:
 
     template<typename FriendFuncT, typename... FriendArgsT>
     friend internal::MakeReturn<FriendFuncT> make(FriendArgsT &&... args);
+
+    template<typename FriendValueT, typename FriendContT>
+    friend struct internal::PrepareRegularContImpl;
 };
 
 template<typename ResultT, typename ReasonT>
@@ -181,38 +150,22 @@ BaseBlock<ResultT, ReasonT>::BaseBlock(BrickPtrType brick): brick(std::move(bric
 
 namespace internal {
 
-template<typename ContT, typename... ArgsT>
-struct ContTraitsWithReturn<ContT, void, ArgsT...> {
-    typedef BaseBlock<void(), Und> BlockType;
-    class ContType {
+template<typename... ArgsT, typename ContT>
+struct CoerceContImpl<void(ArgsT...), ContT, void> {
+    class Type {
     public:
         template<typename ArgT>
-        explicit ContType(ArgT && cont): cont(std::forward<ArgT>(cont)) {}
+        explicit Type(ArgT && cont): cont(std::forward<ArgT>(cont)) {}
 
-        BlockType operator()(ArgsT &&... args) {
+        BaseBlock<void(), Und> operator()(ArgsT &&... args) {
             cont(std::forward<ArgsT>(args)...);
-            return success<BlockType>();
+            return success();
         }
 
     private:
         ContT cont;
     };
 };
-
-template<typename ReturnT, typename DecayedArgT, typename ArgT>
-struct ContBuilder {
-    static ReturnT build(ArgT && arg) {
-        return ReturnT(std::forward<ArgT>(arg));
-    }
-};
-
-template<typename ReturnT, typename ArgT>
-struct ContBuilder<ReturnT, Pass, ArgT> {
-    static ReturnT build(ArgT &&) {
-        return ReturnT();
-    }
-};
-
 
 } // namespace internal
 
@@ -221,45 +174,20 @@ template<typename SuccessContT, typename ErrorContT>
 auto BaseBlock<ResultT, ReasonT>::pipe(
     SuccessContT && successCont,
     ErrorContT && errorCont
-) -> typename internal::BlockContTraits<
-    BlockType,
+) -> typename PipeTraits<
     typename std::decay<SuccessContT>::type,
     typename std::decay<ErrorContT>::type
->::BlockType {
-    typedef typename std::decay<SuccessContT>::type SuccessContD;
-    typedef typename std::decay<ErrorContT>::type ErrorContD;
-    typedef internal::BlockContTraits<BlockType, SuccessContD, ErrorContD> Traits;
-    typedef typename Traits::BlockType OutBlockType;
-    typedef typename std::conditional<
-        IsDefined<typename Traits::SuccessContType>::value,
-        typename OutBlockType::template Unpacker<typename Traits::SuccessContType>,
-        Und
-    >::type BrickSuccessContType;
-    typedef typename std::conditional<
-        IsDefined<typename Traits::ErrorContType>::value,
-        typename OutBlockType::template Unpacker<typename Traits::ErrorContType>,
-        Und
-    >::type BrickErrorContType;
-    typedef internal::ContBuilder<BrickSuccessContType, SuccessContD, SuccessContT> SuccessContBuilder;
-    typedef internal::ContBuilder<BrickErrorContType, ErrorContD, ErrorContT> ErrorContBuilder;
+>::OutBlockType {
+    typedef PipeTraits<
+        typename std::decay<SuccessContT>::type,
+        typename std::decay<ErrorContT>::type
+    > Traits;
 
-    struct AbortCont {
-        ll::BrickPtr<Und, Und> operator()() {
-            return ll::makeBrick<ll::AbortBrick>();
-        }
-    };
-
-    return OutBlockType(ll::makeBrick<ll::PipeBrick<
-        ResultType,
-        ReasonType,
-        BrickSuccessContType,
-        BrickErrorContType,
-        AbortCont
-    >>(
+    return typename Traits::OutBlockType(ll::makeBrick<typename Traits::PipeBrickType>(
         this->takeBrick(),
-        SuccessContBuilder::build(std::forward<SuccessContT>(successCont)),
-        ErrorContBuilder::build(std::forward<ErrorContT>(errorCont)),
-        AbortCont()
+        std::forward<SuccessContT>(successCont),
+        std::forward<ErrorContT>(errorCont),
+        typename Traits::AbortContType()
     ));
 }
 

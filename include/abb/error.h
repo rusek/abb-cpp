@@ -12,7 +12,7 @@ namespace abb {
 template<typename BlockT, typename... ArgsT>
 internal::ErrorReturn<BlockT, ArgsT...> error(ArgsT &&... args) {
     typedef internal::ErrorReturn<BlockT, ArgsT...> BlockType;
-    typedef ll::ErrorBrick<typename BlockType::ResultType, typename BlockType::ReasonType> ErrorBrickType;
+    typedef ll::ErrorBrick<GetResult<BlockType>, GetReason<BlockType>> ErrorBrickType;
 
     return BlockType(ll::makeBrick<ErrorBrickType>(std::forward<ArgsT>(args)...));
 }
