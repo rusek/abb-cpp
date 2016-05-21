@@ -47,7 +47,7 @@ public:
     virtual void dropHandle();
 
 private:
-    virtual void oncomplete();
+    virtual void onUpdate();
     virtual Island & getIsland() const;
     virtual bool isAborted() const;
     virtual void run();
@@ -58,12 +58,8 @@ private:
 };
 
 template<typename ResultT, typename ReasonT, bool External>
-void Runner<ResultT, ReasonT, External>::oncomplete() {
-    this->island.decrefExternal();
-    this->flags |= RUNNER_COMPLETED;
-    if (this->flags & RUNNER_HANDLE_DROPPED) {
-        delete this;
-    }
+void Runner<ResultT, ReasonT, External>::onUpdate() {
+    this->run();
 }
 
 template<typename ResultT, typename ReasonT, bool External>
@@ -78,7 +74,22 @@ bool Runner<ResultT, ReasonT, External>::isAborted() const {
 
 template<typename ResultT, typename ReasonT, bool External>
 void Runner<ResultT, ReasonT, External>::run() {
-    this->brick.start(*this);
+    for (;;) {
+        Status status = this->brick.getStatus();
+        if (status == PENDING) {
+            this->brick.start(*this);
+            return;
+        } else if (status & NEXT) {
+            this->brick = this->brick.getNext();
+        } else {
+            this->island.decrefExternal();
+            this->flags |= RUNNER_COMPLETED;
+            if (this->flags & RUNNER_HANDLE_DROPPED) {
+                delete this;
+            }
+            return;
+        }
+    }
     // FIXME handle abort ????
 }
 

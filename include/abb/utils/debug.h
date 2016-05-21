@@ -2,8 +2,7 @@
 #define ABB_UTILS_DEBUG_H
 
 #include <cstdint>
-#include <iostream>
-#include <cstdlib>
+#include <sstream>
 
 namespace abb {
 namespace utils {
@@ -16,6 +15,19 @@ struct FiascoInfo {
 };
 
 [[noreturn]] void fiasco(FiascoInfo const& info);
+void trace(char const* file, std::uint32_t line, char const* msg);
+
+#if 1
+#define ABB_TRACE(msg) \
+    do { \
+        ::std::stringstream __ss; \
+        __ss << msg; \
+        ::abb::utils::internal::trace(__FILE__, __LINE__, __ss.str().c_str()); \
+    } \
+    while (0)
+#else
+#define ABB_TRACE(msg) do {} while (0)
+#endif
 
 #define ABB_FIASCO(msg) \
     do { \

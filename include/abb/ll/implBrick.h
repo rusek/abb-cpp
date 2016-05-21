@@ -110,7 +110,7 @@ protected:
 
 template<typename ResultT, typename ReasonT, typename FuncT>
 void ImplBrick<ResultT, ReasonT, FuncT>::run() {
-    this->successor->oncomplete();
+    this->successor->onUpdate();
 }
 
 template<typename ResultT, typename ReasonT, typename FuncT>

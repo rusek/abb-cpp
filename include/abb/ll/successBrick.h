@@ -23,8 +23,8 @@ public:
 
     void abort() {}
 
-    void start(Successor & successor) {
-        successor.oncomplete();
+    void start(Successor &) {
+        ABB_FIASCO("start called on SuccessBrick");
     }
 
     Status getStatus() const {

@@ -16,7 +16,7 @@ public:
     void abort() {}
 
     void start(Successor & successor) {
-        successor.oncomplete();
+        successor.onUpdate();
     }
 
     Status getStatus() const {

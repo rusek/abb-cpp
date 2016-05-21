@@ -34,7 +34,6 @@ public:
         return this->brick.getReason();
     }
 
-
 private:
     FuncT func;
     BrickPtr<ResultT, ReasonT> brick;

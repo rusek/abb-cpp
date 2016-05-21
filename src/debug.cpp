@@ -12,6 +12,10 @@ void fiasco(FiascoInfo const& info) {
     std::abort();
 }
 
+void trace(char const* file, std::uint32_t line, char const* msg) {
+    std::cerr << "File " << file << ", line " << line << ": " << msg << std::endl;
+}
+
 } // namespace internal
 } // namespace utils
 } // namespace abb

@@ -53,32 +53,24 @@ public:
     }
 
     void abort() {
-        if (this->outBrick) {
-            this->outBrick.abort();
-        } else {
-            this->inBrick.abort();
-        }
+        this->inBrick.abort();
     }
 
     void start(Successor & successor) {
         this->successor = &successor;
-        this->inBrick.start(*this);
+        this->onUpdate();
     }
 
     Status getStatus() const {
-        return this->outBrick ? this->outBrick.getStatus() : PENDING;
+        return this->outBrick ? NEXT : PENDING;
     }
 
-    ValueToTuple<GetResult<OutBrickPtrType>> & getResult() {
-        return this->outBrick.getResult();
-    }
-
-    ValueToTuple<GetReason<OutBrickPtrType>> & getReason() {
-        return this->outBrick.getReason();
+    OutBrickPtrType getNext() {
+        return std::move(this->outBrick);
     }
 
 private:
-    virtual void oncomplete();
+    virtual void onUpdate();
     virtual Island & getIsland() const;
     virtual bool isAborted() const;
 
@@ -90,18 +82,23 @@ private:
 };
 
 template<typename ResultT, typename ReasonT, typename SuccessContT, typename ErrorContT, typename AbortContT>
-void PipeBrick<ResultT, ReasonT, SuccessContT, ErrorContT, AbortContT>::oncomplete() {
-    if (this->inBrick.getStatus() & ABORT) {
-        this->outBrick = this->abortCont();
-    } else {
-        this->outBrick = this->brickCont(std::move(this->inBrick));
-    }
-
-    if (this->outBrick.getStatus() == PENDING) {
-        this->outBrick.start(*this->successor);
-    } else {
-        // this->brickCont returned this->inBrick as this->outBrick
-        this->successor->oncomplete();
+void PipeBrick<ResultT, ReasonT, SuccessContT, ErrorContT, AbortContT>::onUpdate() {
+    for (;;) {
+        Status status = this->inBrick.getStatus();
+        if (status == PENDING) {
+            this->inBrick.start(*this);
+            return;
+        } else if (status & NEXT) {
+            this->inBrick = this->inBrick.getNext();
+        } else {
+            if (this->inBrick.getStatus() & ABORT) {
+                this->outBrick = this->abortCont();
+            } else {
+                this->outBrick = this->brickCont(std::move(this->inBrick));
+            }
+            this->successor->onUpdate();
+            return;
+        }
     }
 }
 

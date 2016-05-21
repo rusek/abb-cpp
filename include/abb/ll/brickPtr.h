@@ -7,6 +7,12 @@
 namespace abb {
 namespace ll {
 
+template<typename ResultT, typename ReasonT>
+class BrickPtr;
+
+template<typename ArgT>
+using GetBrickPtr = BrickPtr<GetResult<ArgT>, GetReason<ArgT>>;
+
 namespace internal {
 
 typedef void RawValue;
@@ -16,6 +22,7 @@ struct BrickVtable {
     void (*abort)(RawBrick * brick);
     void (*start)(RawBrick * brick, Successor & successor);
     Status (*getStatus)(RawBrick const* brick);
+    RawBrick * (*getNext)(RawBrick * brick);
     void (*destroy)(RawBrick * brick);
     // Success-related methods
     RawValue * (*getResult)(RawBrick * brick);
@@ -44,6 +51,7 @@ struct BrickFuncs {
     static void abort(RawBrick * brick);
     static void start(RawBrick * brick, Successor & successor);
     static Status getStatus(RawBrick const* brick);
+    static RawBrick * getNext(RawBrick * brick);
     static void destroy(RawBrick * brick);
     static RawValue * getResult(RawBrick * brick);
     static RawValue * getReason(RawBrick * brick);
@@ -98,6 +106,14 @@ Status BrickFuncs<BrickT>::getStatus(RawBrick const* brick) {
 }
 
 template<typename BrickT>
+RawBrick * BrickFuncs<BrickT>::getNext(RawBrick * brick) {
+    GetBrickPtr<BrickT> nextBrick = BrickFuncs::fromRaw(brick)->getNext();
+    RawBrick * ptr = nextBrick.ptr;
+    nextBrick.ptr = nullptr;
+    return ptr;
+}
+
+template<typename BrickT>
 RawValue * BrickFuncs<BrickT>::getResult(RawBrick * brick) {
     return BrickFuncs::getResult(brick, IsResultUnd());
 }
@@ -112,6 +128,7 @@ const BrickVtable BrickFuncs<BrickT>::vtable = {
     &BrickFuncs::abort,
     &BrickFuncs::start,
     &BrickFuncs::getStatus,
+    &BrickFuncs::getNext,
     &BrickFuncs::destroy,
     &BrickFuncs::getResult,
     &BrickFuncs::getReason
@@ -189,6 +206,10 @@ public:
         return this->ptr->vtable->getStatus(this->ptr);
     }
 
+    BrickPtr<ResultT, ReasonT> getNext() {
+        return BrickPtr<ResultT, ReasonT>(this->ptr->vtable->getNext(this->ptr));
+    }
+
     ValueToTuple<ResultT> & getResult() {
         return *internal::ValueFuncs<ResultT>::fromRaw(this->ptr->vtable->getResult(this->ptr));
     }
@@ -205,6 +226,9 @@ private:
 
     template<typename FriendResultT, typename FriendReasonT>
     friend class BrickPtr;
+
+    template<typename FriendBrickT>
+    friend class internal::BrickFuncs;
 
     template<typename FriendResultT, typename FriendReasonT>
     friend BrickPtr<FriendResultT, Und> successCast(BrickPtr<FriendResultT, FriendReasonT> && brick);
@@ -228,9 +252,6 @@ inline BrickPtr<Und, ReasonT> errorCast(BrickPtr<ResultT, ReasonT> && brick) {
     brick.ptr = nullptr;
     return BrickPtr<Und, ReasonT>(ptr);
 }
-
-template<typename ArgT>
-using GetBrickPtr = BrickPtr<GetResult<ArgT>, GetReason<ArgT>>;
 
 template<typename BrickT, typename... ArgsT>
 inline GetBrickPtr<BrickT> makeBrick(ArgsT &&... args) {

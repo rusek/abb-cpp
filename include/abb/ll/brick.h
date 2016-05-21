@@ -41,7 +41,7 @@ class BrickFuncs;
 class Successor {
 public:
     virtual ~Successor() {}
-    virtual void oncomplete() = 0;
+    virtual void onUpdate() = 0;
     virtual Island & getIsland() const = 0;
     virtual bool isAborted() const = 0;
 };
@@ -50,7 +50,8 @@ enum {
     PENDING = 0,
     SUCCESS = 1,
     ERROR = 2,
-    ABORT = 4
+    ABORT = 4,
+    NEXT = 8
 };
 
 typedef int Status;
@@ -59,12 +60,27 @@ template<typename ValueT>
 using ValueToTuple = typename internal::ValueToTupleImpl<ValueT>::Type;
 
 template<typename ResultT, typename ReasonT>
+class BrickPtr;
+
+template<typename ResultT, typename ReasonT>
 struct Brick : private internal::RawBrick {
     typedef ResultT ResultType;
     typedef ReasonT ReasonType;
 
     template<typename FriendBrickT>
     friend class internal::BrickFuncs;
+
+    BrickPtr<ResultT, ReasonT> getNext() {
+        ABB_FIASCO("Erased method called");
+    }
+
+    ValueToTuple<ResultT> & getResult() {
+        ABB_FIASCO("Erased method called");
+    }
+
+    ValueToTuple<ReasonT> & getReason() {
+        ABB_FIASCO("Erased method called");
+    }
 };
 
 } // namespace ll

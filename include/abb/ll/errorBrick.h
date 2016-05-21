@@ -23,8 +23,8 @@ public:
 
     void abort() {}
 
-    void start(Successor & successor) {
-        successor.oncomplete();
+    void start(Successor &) {
+        ABB_FIASCO("start called on ErrorBrick");
     }
 
     Status getStatus() const {
@@ -32,7 +32,7 @@ public:
     }
 
     ValueToTuple<ResultT> & getResult() {
-        ABB_FIASCO("getReason called on ErrorBrick");
+        ABB_FIASCO("getResult called on ErrorBrick");
     }
 
     ValueToTuple<ReasonT> & getReason() {
