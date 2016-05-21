@@ -63,9 +63,6 @@ struct Brick : private internal::RawBrick {
     typedef ResultT ResultType;
     typedef ReasonT ReasonType;
 
-    template<typename FriendResultT, typename FriendReasonT>
-    friend class BrickPtr;
-
     template<typename FriendBrickT>
     friend class internal::BrickFuncs;
 };

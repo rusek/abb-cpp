@@ -81,7 +81,7 @@ struct IsValueSubstitutable : std::integral_constant<
 namespace internal {
 
 template<typename FirstT, typename SecondT>
-struct UnifyValuesImpl {
+struct CommonValueImpl {
     typedef typename std::conditional<IsUnd<FirstT>::value, SecondT, FirstT>::type Type;
     static_assert(IsValueSubstitutable<Type, SecondT>::value, "Incompatible types");
 };
@@ -89,7 +89,7 @@ struct UnifyValuesImpl {
 } // namespace internal
 
 template<typename FirstT, typename SecondT>
-using UnifyValues = typename internal::UnifyValuesImpl<FirstT, SecondT>::Type;
+using CommonValue = typename internal::CommonValueImpl<FirstT, SecondT>::Type;
 
 } // namespace abb
 

@@ -238,9 +238,9 @@ inline GetBrickPtr<BrickT> makeBrick(ArgsT &&... args) {
 }
 
 template<typename FirstPtrT, typename SecondPtrT>
-using UnifyBrickPtrs = BrickPtr<
-    UnifyValues<GetResult<FirstPtrT>, GetResult<SecondPtrT>>,
-    UnifyValues<GetReason<FirstPtrT>, GetReason<SecondPtrT>>
+using CommonBrickPtr = BrickPtr<
+    CommonValue<GetResult<FirstPtrT>, GetResult<SecondPtrT>>,
+    CommonValue<GetReason<FirstPtrT>, GetReason<SecondPtrT>>
 >;
 
 } // namespace ll

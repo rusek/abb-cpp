@@ -93,7 +93,7 @@ public:
     typedef SuccessBrickCont<ResultT, SuccessContT> SuccessBrickContType;
     typedef ErrorBrickCont<ReasonT, ErrorContT> ErrorBrickContType;
     typedef BrickPtr<ResultT, ReasonT> InBrickPtrType;
-    typedef UnifyBrickPtrs<
+    typedef CommonBrickPtr<
         typename SuccessBrickContType::OutBrickPtrType,
         typename ErrorBrickContType::OutBrickPtrType
     > OutBrickPtrType;
