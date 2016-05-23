@@ -12,6 +12,7 @@
 #include <abb/ll/pipeBrick.h>
 #include <abb/ll/brickPtr.h>
 #include <abb/ll/abortBrick.h>
+#include <abb/ll/bridge.h>
 
 #include <abb/utils/debug.h>
 #include <abb/utils/noncopyable.h>
@@ -33,14 +34,13 @@ struct PrepareRegularContImpl {};
 
 template<typename... ArgsT, typename ContT>
 struct PrepareRegularContImpl<void(ArgsT...), ContT> {
-    typedef typename CoerceContImpl<
-        void(ArgsT...),
-        ContT,
-        typename std::result_of<ContT(ArgsT...)>::type
-    >::Type CoercedContType;
-
-    typedef typename std::result_of<CoercedContType(ArgsT...)>::type BlockType;
-    typedef typename BlockType::template Unpacker<CoercedContType> Type;
+    typedef ll::Unpacker<
+        typename CoerceContImpl<
+            void(ArgsT...),
+            ContT,
+            typename std::result_of<ContT(ArgsT...)>::type
+        >::Type
+    > Type;
 };
 
 template<typename ValueT, typename ContT>
@@ -83,15 +83,13 @@ public:
     typedef ResultT ResultType;
     typedef ReasonT ReasonType;
 
-    explicit BaseBlock(BrickPtrType brick);
-
     template<typename OtherResultT, typename OtherReasonT>
     BaseBlock(BaseBlock<OtherResultT, OtherReasonT> && other): brick(std::move(other.brick)) {}
 
     ~BaseBlock() {}
 
-    bool empty() const {
-        return !this->brick;
+    bool valid() const {
+        return this->brick;
     }
 
     template<typename SuccessContT, typename ErrorContT>
@@ -108,25 +106,8 @@ public:
         return this->pipe(std::forward<SuccessContT>(successCont), abb::pass);
     }
 
-    Handle enqueue(Island & island = Island::current());
-
-    void enqueueExternal(Island & island);
-
 private:
-    template<typename ContT>
-    class Unpacker {
-    public:
-        template<typename... ArgsT>
-        explicit Unpacker(ArgsT &&... args): cont(std::forward<ArgsT>(args)...) {}
-
-        template<typename... ArgsT>
-        BrickPtrType operator()(ArgsT &&... args) {
-            return cont(std::forward<ArgsT>(args)...).takeBrick();
-        }
-
-    private:
-        ContT cont;
-    };
+    explicit BaseBlock(BrickPtrType && brick): brick(std::move(brick)) {}
 
     BrickPtrType takeBrick() {
         ABB_ASSERT(this->brick, "Block is empty");
@@ -138,15 +119,16 @@ private:
     template<typename FriendResultT, typename FriendReasonT>
     friend class BaseBlock;
 
-    template<typename FriendFuncT, typename... FriendArgsT>
-    friend internal::MakeReturn<FriendFuncT> make(FriendArgsT &&... args);
+    template<typename FriendResultT, typename FriendReasonT>
+    friend BaseBlock<FriendResultT, FriendReasonT> ll::packBrickPtr(
+        ll::BrickPtr<FriendResultT, FriendReasonT> && brick
+    );
 
-    template<typename FriendValueT, typename FriendContT>
-    friend struct internal::PrepareRegularContImpl;
+    template<typename FriendResultT, typename FriendReasonT>
+    friend ll::BrickPtr<FriendResultT, FriendReasonT> ll::unpackBrickPtr(
+        BaseBlock<FriendResultT, FriendReasonT> && block
+    );
 };
-
-template<typename ResultT, typename ReasonT>
-BaseBlock<ResultT, ReasonT>::BaseBlock(BrickPtrType brick): brick(std::move(brick)) {}
 
 namespace internal {
 
@@ -191,23 +173,9 @@ auto BaseBlock<ResultT, ReasonT>::pipe(
     ));
 }
 
-template<typename ResultT, typename ReasonT>
-Handle BaseBlock<ResultT, ReasonT>::enqueue(Island & island) {
-    return ll::enqueue(island, this->takeBrick());
-}
+Handle enqueue(Island & island, BaseBlock<void(), Und> && block);
 
-template<typename ResultT, typename ReasonT>
-void BaseBlock<ResultT, ReasonT>::enqueueExternal(Island & island) {
-    ll::enqueueExternal(island, this->takeBrick());
-}
-
-inline Handle enqueue(Island & island, BaseBlock<void(), void()> block) {
-    return block.enqueue(island);
-}
-
-inline void enqueueExternal(Island & island, BaseBlock<void(), void()> block) {
-    block.enqueueExternal(island);
-}
+void enqueueExternal(Island & island, BaseBlock<void(), Und> && block);
 
 } // namespace abb
 

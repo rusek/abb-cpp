@@ -2,6 +2,8 @@
 #define ABB_MAKE_H
 
 #include <abb/ll/makeBrick.h>
+#include <abb/ll/bridge.h>
+
 #include <abb/block.h>
 #include <abb/makeFwd.h>
 
@@ -13,10 +15,10 @@ internal::MakeReturn<FuncT> make(ArgsT &&... args) {
     typedef ll::MakeBrick<
         GetResult<BlockType>,
         GetReason<BlockType>,
-        typename BlockType::template Unpacker<FuncT>
+        ll::Unpacker<FuncT>
     > MakeBrickType;
 
-    return BlockType(ll::makeBrick<MakeBrickType>(std::forward<ArgsT>(args)...));
+    return ll::packBrick<MakeBrickType>(std::forward<ArgsT>(args)...);
 }
 
 } // namespace abb

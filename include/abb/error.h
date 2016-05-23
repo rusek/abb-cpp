@@ -6,6 +6,7 @@
 
 #include <abb/ll/errorBrick.h>
 #include <abb/ll/brickPtr.h>
+#include <abb/ll/bridge.h>
 
 namespace abb {
 
@@ -14,7 +15,7 @@ internal::ErrorReturn<BlockT, ArgsT...> error(ArgsT &&... args) {
     typedef internal::ErrorReturn<BlockT, ArgsT...> BlockType;
     typedef ll::ErrorBrick<GetResult<BlockType>, GetReason<BlockType>> ErrorBrickType;
 
-    return BlockType(ll::makeBrick<ErrorBrickType>(std::forward<ArgsT>(args)...));
+    return ll::packBrick<ErrorBrickType>(std::forward<ArgsT>(args)...);
 }
 
 } // namespace abb

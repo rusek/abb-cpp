@@ -4,6 +4,7 @@
 #include <abb/reply.h>
 #include <abb/ll/implBrick.h>
 #include <abb/ll/brickPtr.h>
+#include <abb/ll/bridge.h>
 
 #include <functional>
 
@@ -14,7 +15,7 @@ BlockT impl(FuncT && func) {
     typedef typename std::decay<FuncT>::type FuncD;
     typedef ll::ImplBrick<GetResult<BlockT>, GetReason<BlockT>, FuncD> ImplBrickType;
 
-    return BlockT(ll::makeBrick<ImplBrickType>(std::forward<FuncT>(func)));
+    return ll::packBrick<ImplBrickType>(std::forward<FuncT>(func));
 }
 
 } // namespace abb
