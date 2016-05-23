@@ -19,6 +19,12 @@ void HitCounter::hit() {
     this->hits++;
 }
 
+void HitCounter::hit(std::uint32_t hitIndex)
+{
+    REQUIRE_EQUAL(this->hits, hitIndex);
+    this->hits++;
+}
+
 void HitCounter::expectHits(std::uint32_t expectedHits) {
     this->expectedHits = expectedHits;
 }

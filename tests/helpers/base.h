@@ -14,6 +14,7 @@ public:
     ~HitCounter();
 
     void hit();
+    void hit(std::uint32_t hitIndex);
     void expectHits(std::uint32_t expectedHits);
 
     static HitCounter & current();
@@ -25,7 +26,7 @@ private:
     static HitCounter * currentPtr;
 };
 
-#define HIT() (HitCounter::current().hit())
+#define HIT(...) (HitCounter::current().hit(__VA_ARGS__))
 #define EXPECT_HITS(num) (HitCounter::current().expectHits(num))
 
 struct Runner {
