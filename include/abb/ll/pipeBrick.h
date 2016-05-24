@@ -7,8 +7,6 @@
 
 #include <abb/value.h>
 
-#include <abb/utils/call.h>
-
 #include <type_traits>
 
 namespace abb {

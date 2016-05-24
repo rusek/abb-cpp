@@ -6,7 +6,6 @@
 #include <abb/island.h>
 
 #include <abb/utils/debug.h>
-#include <abb/utils/call.h>
 
 namespace abb {
 namespace ll {

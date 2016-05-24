@@ -7,7 +7,6 @@
 #include <abb/reply.h>
 
 #include <abb/utils/debug.h>
-#include <abb/utils/call.h>
 #include <abb/utils/bank.h>
 
 #include <tuple>
