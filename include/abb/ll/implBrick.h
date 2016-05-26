@@ -144,7 +144,7 @@ public:
 protected:
     virtual void setResult(ArgsT... args) {
         ABB_ASSERT(this->status == PENDING, "Already got value");
-        this->value.result.init(std::move(args)...);
+        this->value.result.init(std::forward<ArgsT>(args)...);
         this->status = SUCCESS;
         this->successor->getIsland().enqueue(static_cast<Task&>(*this));
     }
@@ -164,9 +164,9 @@ public:
 protected:
     virtual void setReason(ArgsT... args) {
         ABB_ASSERT(this->status == PENDING, "Already got value");
-        this->value.reason.init(std::move(args)...);
+        this->value.reason.init(std::forward<ArgsT>(args)...);
         this->status = ERROR;
-        this->successor->getIsland().enqueue(*this);
+        this->successor->getIsland().enqueue(static_cast<Task&>(*this));
     }
 };
 
