@@ -3,48 +3,18 @@
 
 namespace abb {
 
-namespace {
-
-template<typename FuncT>
-class FunctorTask : public Task {
-public:
-    explicit FunctorTask(FuncT && func): func(std::forward<FuncT>(func)) {}
-    explicit FunctorTask(FuncT const& func): func(func) {}
-
-    virtual void run();
-
-private:
-    std::function<void()> func;
-};
-
-template<typename FuncT>
-void FunctorTask<FuncT>::run() {
-    this->func();
-    delete this;
-}
-
-} // namespace
-
 Island * Island::currentPtr = nullptr;
 
 Island::Island(): externalCounter(0) {}
 
 Island::~Island() {}
 
-void Island::enqueue2(std::function<void()> task) {
-    this->enqueue(*(new FunctorTask<std::function<void()>>(task)));
-}
-
-void Island::enqueue2(Task & task) {
+void Island::enqueueTask(Task & task) {
     ABB_ASSERT(Island::currentPtr == this, "Not a current island");
     this->tasks.pushBack(task);
 }
 
-void Island::enqueueExternal2(std::function<void()> task) {
-    this->enqueueExternal(*(new FunctorTask<std::function<void()>>(task)));
-}
-
-void Island::enqueueExternal2(Task & task) {
+void Island::enqueueTaskExternal(Task & task) {
     std::unique_lock<std::mutex> lock(this->mutex);
     bool wasEmpty = this->externalTasks.empty();
     this->externalTasks.pushBack(task);
