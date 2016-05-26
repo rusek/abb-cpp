@@ -1,6 +1,12 @@
 #include <abb.h>
 
-abb::VoidBlock ignore(int &) {
+#ifdef APPLY_FIX
+#define MUTABLE const
+#else
+#define MUTABLE
+#endif
+
+abb::VoidBlock ignore(int MUTABLE &) {
     return abb::success();
 }
 
