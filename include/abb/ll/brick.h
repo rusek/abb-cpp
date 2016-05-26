@@ -1,6 +1,8 @@
 #ifndef ABB_LL_BRICK_H
 #define ABB_LL_BRICK_H
 
+#include <abb/ll/store.h>
+
 #include <abb/island.h>
 #include <abb/value.h>
 
@@ -74,11 +76,11 @@ struct Brick : private internal::RawBrick {
         ABB_FIASCO("Erased method called");
     }
 
-    ValueToTuple<ResultT> & getResult() {
+    Store<ResultT> & getResult() {
         ABB_FIASCO("Erased method called");
     }
 
-    ValueToTuple<ReasonT> & getReason() {
+    Store<ReasonT> & getReason() {
         ABB_FIASCO("Erased method called");
     }
 };

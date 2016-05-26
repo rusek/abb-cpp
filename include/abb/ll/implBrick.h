@@ -27,8 +27,8 @@ struct ValueBankImpl {
             }
         }
 
-        utils::Bank<ValueToTuple<ResultT>> result;
-        utils::Bank<ValueToTuple<ReasonT>> reason;
+        utils::Bank<Store<ResultT>> result;
+        utils::Bank<Store<ReasonT>> reason;
     };
 };
 
@@ -39,7 +39,7 @@ struct ValueBankImpl<ResultT, Und> {
             this->result.destroy();
         }
 
-        utils::Bank<ValueToTuple<ResultT>> result;
+        utils::Bank<Store<ResultT>> result;
     };
 };
 
@@ -50,7 +50,7 @@ struct ValueBankImpl<Und, ReasonT> {
             this->reason.destroy();
         }
 
-        utils::Bank<ValueToTuple<ReasonT>> reason;
+        utils::Bank<Store<ReasonT>> reason;
     };
 };
 
@@ -84,12 +84,12 @@ public:
         return this->status;
     }
 
-    ValueToTuple<ResultT> & getResult() {
+    Store<ResultT> & getResult() {
         ABB_ASSERT(this->status & SUCCESS, "Result is not set");
         return *this->value.result;
     }
 
-    ValueToTuple<ReasonT> & getReason() {
+    Store<ReasonT> & getReason() {
         ABB_ASSERT(this->status & ERROR, "Reason is not set");
         return *this->value.reason;
     }

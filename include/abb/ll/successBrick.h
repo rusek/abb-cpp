@@ -30,16 +30,16 @@ public:
         return SUCCESS;
     }
 
-    ValueToTuple<ResultT> & getResult() {
+    Store<ResultT> & getResult() {
         return this->result;
     }
 
-    ValueToTuple<ReasonT> & getReason() {
+    Store<ReasonT> & getReason() {
         ABB_FIASCO("getReason called on SuccessBrick");
     }
 
 private:
-    ValueToTuple<ResultType> result;
+    Store<ResultType> result;
 };
 
 } // namespace ll

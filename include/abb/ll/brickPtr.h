@@ -33,12 +33,12 @@ struct BrickVtable {
 
 template<typename ValueT>
 struct ValueFuncs {
-    static RawValue * toRaw(ValueToTuple<ValueT> * value) {
+    static RawValue * toRaw(Store<ValueT> * value) {
         return static_cast<RawValue*>(value);
     }
 
-    static ValueToTuple<ValueT> * fromRaw(RawValue * value) {
-        return static_cast<ValueToTuple<ValueT>*>(value);
+    static Store<ValueT> * fromRaw(RawValue * value) {
+        return static_cast<Store<ValueT>*>(value);
     }
 };
 
@@ -210,11 +210,11 @@ public:
         return BrickPtr<ResultT, ReasonT>(this->ptr->vtable->getNext(this->ptr));
     }
 
-    ValueToTuple<ResultT> & getResult() {
+    Store<ResultT> & getResult() {
         return *internal::ValueFuncs<ResultT>::fromRaw(this->ptr->vtable->getResult(this->ptr));
     }
 
-    ValueToTuple<ReasonT> & getReason() {
+    Store<ReasonT> & getReason() {
         return *internal::ValueFuncs<ReasonT>::fromRaw(this->ptr->vtable->getReason(this->ptr));
     }
 

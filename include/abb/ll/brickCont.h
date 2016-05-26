@@ -5,8 +5,6 @@
 
 #include <abb/value.h>
 
-#include <abb/utils/seq.h>
-
 #include <type_traits>
 
 namespace abb {
@@ -25,19 +23,6 @@ struct ContReturnImpl<void(ArgsT...), ContT> {
 template<typename ValueT, typename ContT>
 using ContReturn = typename ContReturnImpl<ValueT, ContT>::Type;
 
-template<typename ReturnT, typename ContT, typename... ArgsT, std::size_t... IndicesV>
-inline auto call(ContT & cont, std::tuple<ArgsT...> & tuple, utils::Seq<IndicesV...>) ->
-    ReturnT
-{
-    return cont(std::get<IndicesV>(std::move(tuple))...);
-}
-
-template<typename ReturnT, typename ContT, typename... ArgsT>
-inline auto call(ContT & cont, std::tuple<ArgsT...> & tuple) -> ReturnT
-{
-    return call<ReturnT>(cont, tuple, utils::GetSeq<sizeof...(ArgsT)>());
-}
-
 } // namespace internal
 
 template<typename ResultT, typename ContT>
@@ -50,10 +35,15 @@ public:
     SuccessBrickCont(ArgT && arg): cont(std::forward<ArgT>(arg)) {}
 
     OutBrickPtrType operator()(InBrickPtrType inBrick) {
-        return internal::call<OutBrickPtrType>(this->cont, inBrick.getResult());
+        return this->call(inBrick.getResult(), GetStoreGetters<ResultT>());
     }
 
 private:
+    template<typename... GettersT>
+    OutBrickPtrType call(Store<ResultT> & store, StoreGetters<GettersT...> ) {
+        return this->cont(GettersT()(std::move(store))...);
+    }
+
     ContT cont;
 };
 
@@ -80,10 +70,15 @@ public:
     ErrorBrickCont(ArgT && arg): cont(std::forward<ArgT>(arg)) {}
 
     OutBrickPtrType operator()(InBrickPtrType inBrick) {
-        return internal::call<OutBrickPtrType>(this->cont, inBrick.getReason());
+        return this->call(inBrick.getReason(), GetStoreGetters<ReasonT>());
     }
 
 private:
+    template<typename... GettersT>
+    OutBrickPtrType call(Store<ReasonT> & store, StoreGetters<GettersT...> ) {
+        return this->cont(GettersT()(std::move(store))...);
+    }
+
     ContT cont;
 };
 

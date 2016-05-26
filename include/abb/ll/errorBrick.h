@@ -30,16 +30,16 @@ public:
         return ERROR;
     }
 
-    ValueToTuple<ResultT> & getResult() {
+    Store<ResultT> & getResult() {
         ABB_FIASCO("getResult called on ErrorBrick");
     }
 
-    ValueToTuple<ReasonT> & getReason() {
+    Store<ReasonT> & getReason() {
         return this->reason;
     }
 
 private:
-    ValueToTuple<ReasonType> reason;
+    Store<ReasonType> reason;
 };
 
 } // namespace ll
