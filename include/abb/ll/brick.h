@@ -8,27 +8,12 @@
 
 #include <abb/utils/noncopyable.h>
 
-#include <tuple>
-
 namespace abb {
 namespace ll {
 
 namespace internal {
 
 struct BrickVtable;
-
-template<typename ValueT>
-struct ValueToTupleImpl {};
-
-template<typename... ArgsT>
-struct ValueToTupleImpl<void(ArgsT...)> {
-    typedef std::tuple<ArgsT...> Type;
-};
-
-template<>
-struct ValueToTupleImpl<Und> {
-    typedef Und Type;
-};
 
 class RawBrick : private utils::Noncopyable {
 public:
@@ -57,9 +42,6 @@ enum {
 };
 
 typedef int Status;
-
-template<typename ValueT>
-using ValueToTuple = typename internal::ValueToTupleImpl<ValueT>::Type;
 
 template<typename ResultT, typename ReasonT>
 class BrickPtr;
