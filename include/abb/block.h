@@ -96,14 +96,14 @@ public:
     typename PipeTraits<
         typename std::decay<SuccessContT>::type,
         typename std::decay<ErrorContT>::type
-    >::OutBlockType pipe(SuccessContT && successCont, ErrorContT && errorCont);
+    >::OutBlockType pipe(SuccessContT && successCont, ErrorContT && errorCont) &&;
 
     template<typename SuccessContT>
     typename PipeTraits<
         typename std::decay<SuccessContT>::type,
         Pass
-    >::OutBlockType pipe(SuccessContT && successCont) {
-        return this->pipe(std::forward<SuccessContT>(successCont), abb::pass);
+    >::OutBlockType pipe(SuccessContT && successCont) && {
+        return std::move(*this).pipe(std::forward<SuccessContT>(successCont), abb::pass);
     }
 
 private:
@@ -156,7 +156,7 @@ template<typename SuccessContT, typename ErrorContT>
 auto BaseBlock<ResultT, ReasonT>::pipe(
     SuccessContT && successCont,
     ErrorContT && errorCont
-) -> typename PipeTraits<
+) && -> typename PipeTraits<
     typename std::decay<SuccessContT>::type,
     typename std::decay<ErrorContT>::type
 >::OutBlockType {

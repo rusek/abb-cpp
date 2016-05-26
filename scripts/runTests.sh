@@ -2,6 +2,8 @@
 
 cd $(dirname "$0")/..
 
+mkdir -p build || exit 1
+(cd build && cmake .. && make) || exit 1
 for FILE_PATH in build/test_*
 do
     echo "=== $FILE_PATH"

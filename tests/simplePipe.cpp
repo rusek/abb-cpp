@@ -94,7 +94,7 @@ VoidBlock SuccessRefPipingTest<BlockT>::operator()() {
     EXPECT_HITS(1);
     BlockT block(abb::success(std::ref(this->val)));
 
-    return block.pipe(
+    return std::move(block).pipe(
         std::bind(&SuccessRefPipingTest::requireTen, this, std::placeholders::_1)
     ).pipe(IgnoreResult<BlockT>(), IgnoreReason<BlockT>());
 }
