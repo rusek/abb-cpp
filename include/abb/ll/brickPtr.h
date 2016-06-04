@@ -48,6 +48,14 @@ struct BrickFuncs {
         return static_cast<RawBrick*>(brick);
     }
 
+    static BrickT * fromRaw(RawBrick * brick) {
+        return static_cast<BrickT*>(brick);
+    }
+
+    static BrickT const* fromRaw(RawBrick const* brick) {
+        return static_cast<BrickT const*>(brick);
+    }
+
     static void abort(RawBrick * brick);
     static void start(RawBrick * brick, Successor & successor);
     static Status getStatus(RawBrick const* brick);
@@ -61,14 +69,6 @@ struct BrickFuncs {
 private:
     typedef IsUnd<GetResult<BrickT>> IsResultUnd;
     typedef IsUnd<GetReason<BrickT>> IsReasonUnd;
-
-    static BrickT * fromRaw(RawBrick * brick) {
-        return static_cast<BrickT*>(brick);
-    }
-
-    static BrickT const* fromRaw(RawBrick const* brick) {
-        return static_cast<BrickT const*>(brick);
-    }
 
     static RawValue * getResult(RawBrick * brick, std::false_type) {
         return ValueFuncs<GetResult<BrickT>>::toRaw(&BrickFuncs::fromRaw(brick)->getResult());
@@ -190,6 +190,13 @@ public:
         }
     }
 
+    void reset() {
+        if (this->ptr) {
+            this->ptr->vtable->destroy(this->ptr);
+            this->ptr = nullptr;
+        }
+    }
+
     explicit operator bool() const {
         return this->ptr;
     }
@@ -235,6 +242,9 @@ private:
 
     template<typename FriendResultT, typename FriendReasonT>
     friend BrickPtr<Und, FriendReasonT> errorCast(BrickPtr<FriendResultT, FriendReasonT> && brick);
+
+    template<typename FriendBrickT>
+    friend FriendBrickT * brickCast(GetBrickPtr<FriendBrickT> & brick);
 };
 
 template<typename ResultT, typename ReasonT>
@@ -251,6 +261,15 @@ inline BrickPtr<Und, ReasonT> errorCast(BrickPtr<ResultT, ReasonT> && brick) {
     internal::RawBrick * ptr = brick.ptr;
     brick.ptr = nullptr;
     return BrickPtr<Und, ReasonT>(ptr);
+}
+
+template<typename BrickT>
+BrickT * brickCast(GetBrickPtr<BrickT> & brick) {
+    if (brick.ptr->vtable == &internal::BrickFuncs<BrickT>::vtable) {
+        return internal::BrickFuncs<BrickT>::fromRaw(brick.ptr);
+    } else {
+        return nullptr;
+    }
 }
 
 template<typename BrickT, typename... ArgsT>

@@ -18,11 +18,12 @@ public:
 };
 
 enum {
-    RUNNER_PENDING = 0,
-    RUNNER_ABORTING = 1,
-    RUNNER_COMPLETED = 2,
-    RUNNER_HANDLE_DROPPED = 4,
-    RUNNER_STARTED = 8
+    RUNNER_REF_HANDLE = 1,
+    RUNNER_REF_ENQUEUE = 2,
+    RUNNER_REF_WORK = 4,
+    RUNNER_REF = RUNNER_REF_HANDLE | RUNNER_REF_ENQUEUE | RUNNER_REF_WORK,
+    RUNNER_ABORT_REQUESTED = 8,
+    RUNNER_ABORT_ACCEPTED = 16
 };
 
 typedef int Flags;
@@ -33,7 +34,7 @@ public:
     Runner(Island & island, BrickPtr<ResultT, ReasonT> brick):
         island(island),
         brick(std::move(brick)),
-        flags(RUNNER_PENDING)
+        flags(RUNNER_REF_ENQUEUE | RUNNER_REF_HANDLE)
     {
         this->island.increfExternal();
         if (External) {
@@ -59,21 +60,6 @@ private:
 
 template<typename ResultT, typename ReasonT, bool External>
 void Runner<ResultT, ReasonT, External>::onUpdate() {
-    this->run();
-}
-
-template<typename ResultT, typename ReasonT, bool External>
-Island & Runner<ResultT, ReasonT, External>::getIsland() const {
-    return this->island;
-}
-
-template<typename ResultT, typename ReasonT, bool External>
-bool Runner<ResultT, ReasonT, External>::isAborted() const {
-    return (this->flags & RUNNER_ABORTING) != 0;
-}
-
-template<typename ResultT, typename ReasonT, bool External>
-void Runner<ResultT, ReasonT, External>::run() {
     for (;;) {
         Status status = this->brick.getStatus();
         if (status == PENDING) {
@@ -83,30 +69,56 @@ void Runner<ResultT, ReasonT, External>::run() {
             this->brick = this->brick.getNext();
         } else {
             this->island.decrefExternal();
-            this->flags |= RUNNER_COMPLETED;
-            if (this->flags & RUNNER_HANDLE_DROPPED) {
+            this->flags &= ~RUNNER_REF_WORK;
+            if ((this->flags & RUNNER_REF) == 0) {
                 delete this;
             }
             return;
         }
     }
-    // FIXME handle abort ????
+}
+
+template<typename ResultT, typename ReasonT, bool External>
+Island & Runner<ResultT, ReasonT, External>::getIsland() const {
+    return this->island;
+}
+
+template<typename ResultT, typename ReasonT, bool External>
+bool Runner<ResultT, ReasonT, External>::isAborted() const {
+    return (this->flags & RUNNER_ABORT_ACCEPTED) != 0;
+}
+
+template<typename ResultT, typename ReasonT, bool External>
+void Runner<ResultT, ReasonT, External>::run() {
+    this->flags &= ~RUNNER_REF_ENQUEUE;
+    if (this->flags & RUNNER_ABORT_REQUESTED) {
+        this->flags |= RUNNER_ABORT_ACCEPTED;
+        if (this->flags & RUNNER_REF_WORK) {
+            this->brick.abort();
+        } else if (!(this->flags & RUNNER_REF)) {
+            delete this;
+        }
+    } else {
+        this->flags |= RUNNER_REF_WORK;
+        this->onUpdate();
+    }
 }
 
 template<typename ResultT, typename ReasonT, bool External>
 void Runner<ResultT, ReasonT, External>::abort() {
-    if (!(this->flags & RUNNER_ABORTING)) {
-        this->flags |= RUNNER_ABORTING;
-        if (this->flags & RUNNER_STARTED) {
-            this->brick.abort(); // FIXME should we enqueue it ????
+    if (!(this->flags & RUNNER_ABORT_REQUESTED)) {
+        this->flags |= RUNNER_ABORT_REQUESTED;
+        if (!(this->flags & RUNNER_REF_ENQUEUE)) {
+            this->flags |= RUNNER_REF_ENQUEUE;
+            this->island.enqueue(static_cast<Task&>(*this));
         }
     }
 }
 
 template<typename ResultT, typename ReasonT, bool External>
 void Runner<ResultT, ReasonT, External>::dropHandle() {
-    this->flags |= RUNNER_HANDLE_DROPPED;
-    if (this->flags & RUNNER_COMPLETED) {
+    this->flags &= ~RUNNER_REF_HANDLE;
+    if ((this->flags & RUNNER_REF) == 0) {
         delete this;
     }
 }

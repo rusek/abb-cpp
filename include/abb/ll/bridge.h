@@ -39,6 +39,33 @@ public:
 
 };
 
+template<typename IteratorT>
+class UnpackIterator {
+private:
+    IteratorT wrapped; // must be present before operator*
+
+public:
+    explicit UnpackIterator(IteratorT wrapped): wrapped(wrapped) {}
+
+    bool operator!=(UnpackIterator<IteratorT> const& other) {
+        return this->wrapped != other.wrapped;
+    }
+
+    UnpackIterator<IteratorT> & operator++() {
+        ++this->wrapped;
+        return *this;
+    }
+
+    auto operator*() -> decltype(ll::unpackBrickPtr(*this->wrapped)) {
+        return ll::unpackBrickPtr(*this->wrapped);
+    }
+};
+
+template<typename IteratorT>
+inline UnpackIterator<IteratorT> makeUnpackIterator(IteratorT it) {
+    return UnpackIterator<IteratorT>(it);
+}
+
 } // namespace ll
 } // namespace abb
 

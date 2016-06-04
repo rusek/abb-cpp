@@ -2,3 +2,4 @@ a.out
 core
 /build
 /build.coverage
+/build.memcheck
