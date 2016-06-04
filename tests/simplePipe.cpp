@@ -202,7 +202,7 @@ int main() {
     RUN_FUNCTION(testSuccessPiping<abb::Block<int, std::string>>);
     RUN_CLASS(SuccessRefPipingTest<IdentityIntRefBlock>);
     RUN_CLASS(SuccessRefPipingTest<abb::Block<IdentityInt&, void>>);
-    RUN_FUNCTION(testErrorPiping<abb::ErrorBlock<int>>);
+    RUN_FUNCTION(testErrorPiping<abb::Block<abb::Und, int>>);
     RUN_FUNCTION(testErrorPiping<abb::Block<void, int>>);
     RUN_FUNCTION(testErrorPiping<abb::Block<int, int>>);
     RUN_CLASS(ErrorRefPipingTest<abb::Block<abb::Und, IdentityInt&>>);

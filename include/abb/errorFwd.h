@@ -5,15 +5,12 @@
 
 namespace abb {
 
-template<typename... ArgsT>
-using ErrorBlock = Block<Und, void(ArgsT...)>;
-
 namespace internal {
 
 template<typename BlockT, typename... ArgsT>
 using ErrorReturn = typename std::conditional<
     IsPass<BlockT>::value,
-    ErrorBlock<typename std::decay<ArgsT>::type...>,
+    Block<Und, void(typename std::decay<ArgsT>::type...)>,
     BlockT
 >::type;
 

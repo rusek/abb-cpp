@@ -5,15 +5,12 @@
 
 namespace abb {
 
-template<typename... ArgsT>
-using SuccessBlock = Block<void(ArgsT...), Und>;
-
 namespace internal {
 
 template<typename BlockT, typename... ArgsT>
 using SuccessReturn = typename std::conditional<
     IsPass<BlockT>::value,
-    SuccessBlock<typename std::decay<ArgsT>::type...>,
+    Block<void(typename std::decay<ArgsT>::type...), Und>,
     BlockT
 >::type;
 

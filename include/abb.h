@@ -9,10 +9,4 @@
 #include <abb/make.h>
 #include <abb/any.h>
 
-namespace abb {
-
-typedef Block<void()> VoidBlock;
-
-} // namespace abb
-
 #endif // ABB_H
