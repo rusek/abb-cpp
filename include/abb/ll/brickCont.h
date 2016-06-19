@@ -17,7 +17,7 @@ struct ContReturnImpl {};
 
 template<typename... ArgsT, typename ContT>
 struct ContReturnImpl<void(ArgsT...), ContT> {
-    typedef typename std::result_of<ContT(ArgsT...)>::type Type;
+    typedef typename std::result_of<ContT &&(ArgsT...)>::type Type;
 };
 
 template<typename ValueT, typename ContT>
@@ -34,14 +34,14 @@ public:
     template<typename ArgT>
     SuccessBrickCont(ArgT && arg): cont(std::forward<ArgT>(arg)) {}
 
-    OutBrickPtrType operator()(InBrickPtrType inBrick) {
-        return this->call(inBrick.getResult(), GetStoreGetters<ResultT>());
+    OutBrickPtrType operator()(InBrickPtrType inBrick) && {
+        return std::move(*this).call(inBrick.getResult(), GetStoreGetters<ResultT>());
     }
 
 private:
     template<typename... GettersT>
-    OutBrickPtrType call(Store<ResultT> & store, StoreGetters<GettersT...> ) {
-        return this->cont(GettersT()(std::move(store))...);
+    OutBrickPtrType call(Store<ResultT> & store, StoreGetters<GettersT...> ) && {
+        return std::move(*this).cont(GettersT()(std::move(store))...);
     }
 
     ContT cont;
@@ -69,14 +69,14 @@ public:
     template<typename ArgT>
     ErrorBrickCont(ArgT && arg): cont(std::forward<ArgT>(arg)) {}
 
-    OutBrickPtrType operator()(InBrickPtrType inBrick) {
-        return this->call(inBrick.getReason(), GetStoreGetters<ReasonT>());
+    OutBrickPtrType operator()(InBrickPtrType inBrick) && {
+        return std::move(*this).call(inBrick.getReason(), GetStoreGetters<ReasonT>());
     }
 
 private:
     template<typename... GettersT>
-    OutBrickPtrType call(Store<ReasonT> & store, StoreGetters<GettersT...> ) {
-        return this->cont(GettersT()(std::move(store))...);
+    OutBrickPtrType call(Store<ReasonT> & store, StoreGetters<GettersT...> ) && {
+        return std::move(this->cont)(GettersT()(std::move(store))...);
     }
 
     ContT cont;
@@ -111,11 +111,11 @@ public:
         successBrickCont(std::forward<SuccessArgT>(successArg)),
         errorBrickCont(std::forward<ErrorArgT>(errorArg)) {}
 
-    OutBrickPtrType operator()(InBrickPtrType inBrick) {
+    OutBrickPtrType operator()(InBrickPtrType inBrick) && {
         if (inBrick.getStatus() & SUCCESS) {
-            return this->successBrickCont(successCast(std::move(inBrick)));
+            return std::move(this->successBrickCont)(successCast(std::move(inBrick)));
         } else {
-            return this->errorBrickCont(errorCast(std::move(inBrick)));
+            return std::move(this->errorBrickCont)(errorCast(std::move(inBrick)));
         }
     }
 

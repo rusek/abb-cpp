@@ -8,7 +8,7 @@ namespace abb {
 namespace internal {
 
 template<typename FuncT>
-using MakeReturn = typename std::result_of<FuncT()>::type;
+using MakeReturn = typename std::result_of<FuncT &&()>::type;
 
 } // namespace internal
 

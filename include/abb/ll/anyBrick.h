@@ -128,6 +128,11 @@ public:
         this->lastChild = lastChild;
     }
 
+    AnyBrick():
+        firstChild(nullptr),
+        lastChild(nullptr),
+        successor(nullptr) {}
+
     ~AnyBrick() {
         for (ChildType * child = this->firstChild; child; ) {
             ChildType * nextChild = child->nextSibling;

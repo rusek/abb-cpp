@@ -33,10 +33,11 @@ public:
     explicit Unpacker(ArgsT &&... args): cont(std::forward<ArgsT>(args)...) {}
 
     template<typename... ArgsT>
-    auto operator()(ArgsT &&... args) -> decltype(unpackBrickPtr(this->cont(std::forward<ArgsT>(args)...))) {
-        return unpackBrickPtr(this->cont(std::forward<ArgsT>(args)...));
+    auto operator()(ArgsT &&... args) && ->
+        decltype(unpackBrickPtr(std::move(this->cont)(std::forward<ArgsT>(args)...)))
+    {
+        return unpackBrickPtr(std::move(this->cont)(std::forward<ArgsT>(args)...));
     }
-
 };
 
 template<typename IteratorT>

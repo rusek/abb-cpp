@@ -38,7 +38,7 @@ struct PrepareRegularContImpl<void(ArgsT...), ContT> {
         typename CoerceContImpl<
             void(ArgsT...),
             ContT,
-            typename std::result_of<ContT(ArgsT...)>::type
+            typename std::result_of<ContT &&(ArgsT...)>::type
         >::Type
     > Type;
 };
@@ -55,6 +55,24 @@ struct PrepareContImpl<ValueT, Pass> {
 template<typename ValueT>
 struct PrepareContImpl<ValueT, Und> {
     typedef Und Type;
+};
+
+template<typename ValueT, typename ResultT, typename ReasonT>
+struct PrepareContImpl<ValueT, BaseBlock<ResultT, ReasonT>> {
+    class Forwarder {
+    public:
+        explicit Forwarder(BaseBlock<ResultT, ReasonT> && block):
+            block(std::move(block)) {}
+
+        BaseBlock<ResultT, ReasonT> operator()() && {
+            return std::move(this->block);
+        }
+
+    private:
+        BaseBlock<ResultT, ReasonT> block;
+    };
+
+    typedef ll::Unpacker<Forwarder> Type;
 };
 
 } // namespace internal

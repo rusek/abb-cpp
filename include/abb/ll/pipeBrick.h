@@ -92,7 +92,7 @@ void PipeBrick<ResultT, ReasonT, SuccessContT, ErrorContT, AbortContT>::onUpdate
             if (this->inBrick.getStatus() & ABORT) {
                 this->outBrick = this->abortCont();
             } else {
-                this->outBrick = this->brickCont(std::move(this->inBrick));
+                this->outBrick = std::move(this->brickCont)(std::move(this->inBrick));
             }
             this->successor->onUpdate();
             return;

@@ -15,7 +15,7 @@ public:
 
     void start(Successor & successor) {
         this->successor = &successor;
-        this->brick = this->func();
+        this->brick = std::move(this->func)();
         this->onUpdate();
     }
 

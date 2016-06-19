@@ -8,5 +8,6 @@
 #include <abb/impl.h>
 #include <abb/make.h>
 #include <abb/any.h>
+#include <abb/chain.h>
 
 #endif // ABB_H

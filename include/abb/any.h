@@ -70,6 +70,8 @@ typename internal::AnyOfRangeTraits<RangeT &&>::BlockType anyOf(RangeT && range)
     return anyOf(Traits::doBegin(std::forward<RangeT>(range)), Traits::doEnd(std::forward<RangeT>(range)));
 }
 
+UndBlock hold();
+
 } // namespace abb
 
 #endif // ABB_ANY_H

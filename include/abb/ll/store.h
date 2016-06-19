@@ -20,8 +20,8 @@ private:
     typedef std::integral_constant<std::size_t, IndexV> IndexT;
 
 public:
-    auto operator()(Store<void(ArgsT...)> && store) -> decltype(store.move(IndexT())) {
-        return store.move(IndexT());
+    auto operator()(Store<void(ArgsT...)> && store) -> decltype(std::move(store).get(IndexT())) {
+        return std::move(store).get(IndexT());
     }
 };
 
@@ -46,13 +46,16 @@ struct GetStoreGettersImpl<void(ArgsT...)> {
     typedef typename internal::GenStoreGetters<void(ArgsT...), sizeof...(ArgsT)>::Type Type;
 };
 
-template<typename std::size_t IndexV, typename ArgT>
-class StoreItem {
-public:
-    explicit StoreItem(ArgT const& arg) : arg(arg) {}
-    explicit StoreItem(ArgT && arg) : arg(std::move(arg)) {}
+template<std::size_t IndexV, typename... ArgsT>
+class StoreImpl {};
 
-    ArgT && move(std::integral_constant<std::size_t, IndexV>) {
+template<typename std::size_t IndexV, typename ArgT>
+class StoreImpl<IndexV, ArgT> {
+public:
+    explicit StoreImpl(ArgT const& arg) : arg(arg) {}
+    explicit StoreImpl(ArgT && arg) : arg(std::move(arg)) {}
+
+    ArgT && get(std::integral_constant<std::size_t, IndexV>) && {
         return std::move(this->arg);
     }
 
@@ -61,12 +64,12 @@ private:
 };
 
 template<typename std::size_t IndexV, typename ArgT>
-class StoreItem<IndexV, ArgT &> {
+class StoreImpl<IndexV, ArgT &> {
 public:
     template<typename... CtorArgsT>
-    explicit StoreItem(ArgT & arg) : arg(std::addressof(arg)) {}
+    explicit StoreImpl(ArgT & arg) : arg(std::addressof(arg)) {}
 
-    ArgT & move(std::integral_constant<std::size_t, IndexV>) {
+    ArgT & get(std::integral_constant<std::size_t, IndexV>) && {
         return *this->arg;
     }
 
@@ -74,16 +77,16 @@ private:
     ArgT * arg;
 };
 
-template<std::size_t IndexV, typename... ArgsT>
-class StoreTail {};
-
 template<typename std::size_t IndexV, typename ArgT, typename... ArgsT>
-class StoreTail<IndexV, ArgT, ArgsT...> : public StoreItem<IndexV, ArgT>, StoreTail<IndexV + 1, ArgsT...> {
+class StoreImpl<IndexV, ArgT, ArgsT...> : public StoreImpl<IndexV, ArgT>, StoreImpl<IndexV + 1, ArgsT...> {
 public:
+    using StoreImpl<IndexV, ArgT>::get;
+    using StoreImpl<IndexV + 1, ArgsT...>::get;
+
     template<typename CtorArgT, typename... CtorArgsT>
-    explicit StoreTail(CtorArgT && arg, CtorArgsT &&... args):
-        StoreItem<IndexV, ArgT>(std::forward<CtorArgT>(arg)),
-        StoreTail<IndexV + 1, ArgsT...>(std::forward<CtorArgsT>(args)...) {}
+    explicit StoreImpl(CtorArgT && arg, CtorArgsT &&... args):
+        StoreImpl<IndexV, ArgT>(std::forward<CtorArgT>(arg)),
+        StoreImpl<IndexV + 1, ArgsT...>(std::forward<CtorArgsT>(args)...) {}
 };
 
 } // namespace internal
@@ -95,10 +98,10 @@ template<typename ValueT>
 class Store {};
 
 template<typename... ArgsT>
-class Store<void(ArgsT...)> : private internal::StoreTail<0, ArgsT...> {
+class Store<void(ArgsT...)> : private internal::StoreImpl<0, ArgsT...> {
 public:
     template<typename... CtorArgsT>
-    explicit Store(CtorArgsT &&... args): internal::StoreTail<0, ArgsT...>(std::forward<CtorArgsT>(args)...) {}
+    explicit Store(CtorArgsT &&... args): internal::StoreImpl<0, ArgsT...>(std::forward<CtorArgsT>(args)...) {}
 
 private:
     template<typename FriendValueT, std::size_t FriendIndexV>
