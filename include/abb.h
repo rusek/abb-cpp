@@ -9,5 +9,6 @@
 #include <abb/make.h>
 #include <abb/any.h>
 #include <abb/chain.h>
+#include <abb/each.h>
 
 #endif // ABB_H

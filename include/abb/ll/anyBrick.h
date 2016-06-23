@@ -4,6 +4,8 @@
 #include <abb/ll/brick.h>
 #include <abb/ll/brickPtr.h>
 #include <abb/ll/abortBrick.h>
+#include <abb/utils/cord.h>
+#include <abb/utils/firewalk.h>
 
 namespace abb {
 namespace ll {
@@ -14,7 +16,7 @@ class AnyBrick;
 namespace internal {
 
 template<typename ResultT, typename ReasonT>
-class AnyChild : private Successor {
+class AnyChild : private Successor, public utils::CordNode {
 private:
     typedef AnyBrick<ResultT, ReasonT> AnyBrickType;
     typedef AnyChild<ResultT, ReasonT> AnyChildType;
@@ -22,8 +24,6 @@ private:
 public:
     explicit AnyChild(BrickPtrType && brick):
         parent(nullptr),
-        prevSibling(nullptr),
-        nextSibling(nullptr),
         brick(std::move(brick)) {}
 
     void start(AnyBrickType * parent);
@@ -35,8 +35,6 @@ public:
     virtual bool isAborted() const;
 
     AnyBrickType * parent;
-    AnyChildType * prevSibling;
-    AnyChildType * nextSibling;
     BrickPtrType brick;
 };
 
@@ -73,16 +71,7 @@ void AnyChild<ResultT, ReasonT>::onUpdate() {
         } else if (status & NEXT) {
             this->brick = this->brick.getNext();
         } else {
-            if (this->prevSibling) {
-                this->prevSibling->nextSibling = this->nextSibling;
-            } else {
-                this->parent->firstChild = this->nextSibling;
-            }
-            if (this->nextSibling) {
-                this->nextSibling->prevSibling = this->prevSibling;
-            } else {
-                this->parent->lastChild = this->prevSibling;
-            }
+            this->cordRemove();
             AnyBrickType * parent = this->parent;
             BrickPtrType brick = std::move(this->brick);
             delete this;
@@ -114,48 +103,31 @@ public:
     AnyBrick(IteratorT begin, IteratorT end):
         successor(nullptr)
     {
-        ChildType * lastChild = nullptr;
         for (; begin != end; ++begin) {
-            ChildType * curChild = new ChildType(std::move(*begin));
-            if (lastChild) {
-                lastChild->nextSibling = curChild;
-                curChild->prevSibling = lastChild;
-            } else {
-                this->firstChild = curChild;
-            }
-            lastChild = curChild;
+            this->children.insert(new ChildType(std::move(*begin)));
         }
-        this->lastChild = lastChild;
     }
 
     AnyBrick():
-        firstChild(nullptr),
-        lastChild(nullptr),
         successor(nullptr) {}
 
     ~AnyBrick() {
-        for (ChildType * child = this->firstChild; child; ) {
-            ChildType * nextChild = child->nextSibling;
+        for (ChildType * child : utils::firewalk(this->children)) {
             delete child;
-            child = nextChild;
         }
     }
 
     void start(Successor & successor) {
         this->successor = &successor;
-        for (ChildType * child = this->firstChild; child; ) {
-            ChildType * nextChild = child->nextSibling;
+        for (ChildType * child : utils::firewalk(this->children)) {
             child->start(this);
-            child = nextChild;
         }
     }
 
     void abort() {
-        if (!this->brick && this->firstChild) {
-            for (ChildType * child = this->firstChild; child; ) {
-                ChildType * nextChild = child->nextSibling;
+        if (!this->brick && !this->children.empty()) {
+            for (ChildType * child : utils::firewalk(this->children)) {
                 child->abort();
-                child = nextChild;
             }
         } else {
             this->brick = makeBrick<AbortBrick>();
@@ -174,8 +146,7 @@ public:
 private:
     void onChildFinish(BrickPtrType brick);
 
-    ChildType * firstChild;
-    ChildType * lastChild;
+    utils::CordList<ChildType> children;
     BrickPtrType brick;
     Successor * successor;
 
@@ -186,20 +157,17 @@ template<typename ResultT, typename ReasonT>
 void AnyBrick<ResultT, ReasonT>::onChildFinish(BrickPtrType brick) {
     if (this->brick) {
         brick.reset();
-        if (!this->firstChild) {
+        if (this->children.empty()) {
             this->successor->onUpdate();
         }
     } else {
         this->brick = std::move(brick);
-        ChildType * child = this->firstChild;
-        if (child) {
-            do {
-                ChildType * nextChild = child->nextSibling;
-                child->abort();
-                child = nextChild;
-            } while (child);
-        } else {
+        if (this->children.empty()) {
             this->successor->onUpdate();
+        } else {
+            for (ChildType * child : utils::firewalk(this->children)) {
+                child->abort();
+            }
         }
     }
 }
