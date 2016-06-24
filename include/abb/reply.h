@@ -1,56 +1,54 @@
 #ifndef ABB_REPLY_H
 #define ABB_REPLY_H
 
-#include <abb/blockFwd.h>
+#include <abb/block_fwd.h>
 #include <abb/island.h>
 
 namespace abb {
 
 namespace internal {
 
-template<typename ResultT, typename ReasonT>
-struct Reply {
-    typedef ResultT ResultType;
-    typedef ReasonT ReasonType;
-    typedef Block<ResultT, ReasonT> BlockType;
+template<typename Result, typename Reason>
+struct reply {
+    typedef Result result;
+    typedef Reason reason;
 
-    virtual ~Reply() {}
+    virtual ~reply() {}
 
-    virtual Island & getIsland() const = 0;
+    virtual island & get_island() const = 0;
 
-    virtual bool isAborted() const = 0;
-    virtual void setAborted() = 0;
+    virtual bool is_aborted() const = 0;
+    virtual void set_aborted() = 0;
 };
 
-template<typename ResultT, typename ReasonT>
-struct SuccessReply : Reply<ResultT, ReasonT> {};
+template<typename Result, typename Reason>
+struct success_reply : reply<Result, Reason> {};
 
-template<typename... ArgsT, typename ReasonT>
-struct SuccessReply<void(ArgsT...), ReasonT> : Reply<void(ArgsT...), ReasonT> {
-    virtual void setResult(ArgsT... args) = 0;
+template<typename... Args, typename Reason>
+struct success_reply<void(Args...), Reason> : reply<void(Args...), Reason> {
+    virtual void set_result(Args... args) = 0;
 };
 
-template<typename ResultT, typename ReasonT>
-struct ErrorReply : SuccessReply<ResultT, ReasonT> {};
+template<typename Result, typename Reason>
+struct error_reply : success_reply<Result, Reason> {};
 
-template<typename ResultT, typename... ArgsT>
-struct ErrorReply<ResultT, void(ArgsT...)> : SuccessReply<ResultT, void(ArgsT...)> {
-    virtual void setReason(ArgsT... args) = 0;
+template<typename Result, typename... Args>
+struct error_reply<Result, void(Args...)> : success_reply<Result, void(Args...)> {
+    virtual void set_reason(Args... args) = 0;
 };
 
 } // namespace internal
 
-template<typename ResultT, typename ReasonT>
-class BaseReply : public internal::ErrorReply<ResultT, ReasonT> {
+template<typename Result, typename Reason>
+class base_reply : public internal::error_reply<Result, Reason> {
 public:
-    typedef BaseReply<ResultT, ReasonT> ReplyType;
 };
 
-template<typename ResultT = Und, typename ReasonT = Und>
-using Reply = BaseReply<NormalizeValue<ResultT>, NormalizeValue<ReasonT>>;
+template<typename Result = und_t, typename Reason = und_t>
+using reply = base_reply<normalize_value_t<Result>, normalize_value_t<Reason>>;
 
-template<typename ArgT>
-using GetReply = BaseReply<GetResult<ArgT>, GetReason<ArgT>>;
+template<typename Arg>
+using get_reply_t = base_reply<get_result_t<Arg>, get_reason_t<Arg>>;
 
 } // namespace abb
 

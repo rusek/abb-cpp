@@ -1,10 +1,10 @@
 #include <abb.h>
 #include <vector>
 
-abb::VoidBlock test() {
-    std::vector<abb::VoidBlock> blocks;
+abb::void_block test() {
+    std::vector<abb::void_block> blocks;
 
-    return abb::anyOf(
+    return abb::any_of(
 #ifdef APPLY_FIX
         std::move
 #endif

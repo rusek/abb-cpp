@@ -7,79 +7,83 @@
 namespace abb {
 namespace utils {
 
-struct CordNode : Noncopyable {
-    CordNode():
-        cordPrev(this),
-        cordNext(this) {}
+struct cord_node : noncopyable {
+    cord_node():
+        cord_prev(this),
+        cord_next(this) {}
 
-    void cordInsert(CordNode * elem) {
-        CordNode * thisPrev = this->cordPrev;
-        CordNode * elemPrev = elem->cordPrev;
+    void cord_insert(cord_node * elem) {
+        cord_node * this_prev = this->cord_prev;
+        cord_node * elem_prev = elem->cord_prev;
 
-        elem->cordPrev = thisPrev;
-        this->cordPrev = elemPrev;
-        thisPrev->cordNext = elem;
-        elemPrev->cordNext = this;
+        elem->cord_prev = this_prev;
+        this->cord_prev = elem_prev;
+        this_prev->cord_next = elem;
+        elem_prev->cord_next = this;
     }
 
-    void cordRemove() {
-        CordNode * thisPrev = this->cordPrev;
-        CordNode * thisNext = this->cordNext;
+    void cord_detach() {
+        cord_node * this_prev = this->cord_prev;
+        cord_node * this_next = this->cord_next;
 
-        thisPrev->cordNext = thisNext;
-        thisNext->cordPrev = thisPrev;
-        this->cordNext = this->cordPrev = this;
+        this_prev->cord_next = this_next;
+        this_next->cord_prev = this_prev;
+        this->cord_next = this->cord_prev = this;
     }
 
-    CordNode * cordPrev;
-    CordNode * cordNext;
+    cord_node * cord_prev;
+    cord_node * cord_next;
 };
 
-template<typename ObjT>
-class CordIterator {
+template<typename Obj>
+class cord_iterator {
 private:
-    typedef typename std::conditional<std::is_const<ObjT>::value, CordNode const*, CordNode *>::type CordNodePtr;
+    typedef typename std::conditional<
+        std::is_const<Obj>::value,
+        cord_node const*,
+        cord_node *
+    >::type cord_node_ptr;
 
 public:
-    explicit CordIterator(CordNodePtr elem): elem(elem) {}
+    explicit cord_iterator(cord_node_ptr elem): elem(elem) {}
 
-    bool operator!=(CordIterator<ObjT> const& other) const {
+    bool operator!=(cord_iterator<Obj> const& other) const {
         return this->elem != other.elem;
     }
 
-    CordIterator<ObjT> & operator++() {
-        this->elem = this->elem->cordNext;
+    cord_iterator<Obj> & operator++() {
+        this->elem = this->elem->cord_next;
         return *this;
     }
 
-    ObjT * operator*() const {
-        return static_cast<ObjT *>(this->elem);
+    Obj * operator*() const {
+        return static_cast<Obj *>(this->elem);
     }
 
 private:
-    CordNodePtr elem;
+    cord_node_ptr elem;
 };
 
-template<typename ObjT>
-class CordList : public CordNode {
+template<typename Obj>
+class cord_list : public cord_node {
 public:
-    typedef CordIterator<ObjT> iterator;
-    typedef CordIterator<ObjT const> const_iterator;
+    typedef cord_iterator<Obj> iterator;
+    typedef cord_iterator<Obj const> const_iterator;
 
-    void insert(ObjT * obj) {
-        this->cordInsert(obj);
+    void insert(Obj * obj) {
+        this->cord_insert(obj);
     }
 
     bool empty() const {
-        return this == this->cordNext;
+        return this == this->cord_next;
     }
 
     iterator begin() {
-        return iterator(this->cordNext);
+        return iterator(this->cord_next);
     }
 
     const_iterator begin() const {
-        return const_iterator(this->cordNext);
+        return const_iterator(this->cord_next);
     }
 
     iterator end() {

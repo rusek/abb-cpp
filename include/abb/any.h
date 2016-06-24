@@ -1,76 +1,76 @@
 #ifndef ABB_ANY_H
 #define ABB_ANY_H
 
-#include <abb/ll/anyBrick.h>
+#include <abb/ll/any_brick.h>
 #include <abb/ll/bridge.h>
 
 namespace abb {
 
 namespace internal {
 
-template<typename IteratorT>
-using AnyOfReturn = typename std::decay<decltype(*std::declval<IteratorT>())>::type;
+template<typename Iterator>
+using any_of_return_t = typename std::decay<decltype(*std::declval<Iterator>())>::type;
 
 using std::begin;
 using std::end;
 
-template<typename RangeT>
-struct AnyOfRangeTraits {};
+template<typename Range>
+struct any_of_range_traits {};
 
-template<typename RangeT>
-struct AnyOfRangeTraits<RangeT &> {
-    typedef decltype(begin(std::declval<RangeT&>())) IteratorType;
-    typedef AnyOfReturn<IteratorType> BlockType;
+template<typename Range>
+struct any_of_range_traits<Range &> {
+    typedef decltype(begin(std::declval<Range&>())) iterator;
+    typedef any_of_return_t<iterator> block_type;
 
-    static IteratorType doBegin(RangeT & range) {
+    static iterator do_begin(Range & range) {
         return begin(range);
     }
 
-    static IteratorType doEnd(RangeT & range) {
+    static iterator do_end(Range & range) {
         return end(range);
     }
 };
 
-template<typename RangeT>
-struct AnyOfRangeTraits<RangeT &&> {
-    typedef std::move_iterator<decltype(begin(std::declval<RangeT&>()))> IteratorType;
-    typedef AnyOfReturn<IteratorType> BlockType;
+template<typename Range>
+struct any_of_range_traits<Range &&> {
+    typedef std::move_iterator<decltype(begin(std::declval<Range&>()))> iterator;
+    typedef any_of_return_t<iterator> block_type;
 
-    static IteratorType doBegin(RangeT && range) {
+    static iterator do_begin(Range && range) {
         return std::make_move_iterator(begin(range));
     }
 
-    static IteratorType doEnd(RangeT && range) {
+    static iterator do_end(Range && range) {
         return std::make_move_iterator(end(range));
     }
 };
 
 } // namespace internal
 
-template<typename... ResultsT, typename... ReasonsT>
-BaseBlock<CommonValue<ResultsT...>, CommonValue<ReasonsT...>> any(BaseBlock<ResultsT, ReasonsT> &&... blocks) {
-    typedef BaseBlock<CommonValue<ResultsT...>, CommonValue<ReasonsT...>> BlockType;
-    typedef ll::AnyBrick<GetResult<BlockType>, GetReason<BlockType>> AnyBrickType;
-    ll::GetBrickPtr<BlockType> bricks[] = {ll::unpackBrickPtr(std::move(blocks))...};
+template<typename... Results, typename... Reasons>
+base_block<common_value_t<Results...>, common_value_t<Reasons...>> any(base_block<Results, Reasons> &&... blocks) {
+    typedef base_block<common_value_t<Results...>, common_value_t<Reasons...>> block_type;
+    typedef ll::any_brick<get_result_t<block_type>, get_reason_t<block_type>> any_brick_type;
+    ll::get_brick_ptr_t<block_type> bricks[] = {ll::unpack_brick_ptr(std::move(blocks))...};
 
-    return ll::packBrick<AnyBrickType>(std::begin(bricks), std::end(bricks));
+    return ll::pack_brick<any_brick_type>(std::begin(bricks), std::end(bricks));
 }
 
-template<typename IteratorT>
-internal::AnyOfReturn<IteratorT> anyOf(IteratorT begin, IteratorT end) {
-    typedef internal::AnyOfReturn<IteratorT> BlockType;
-    typedef ll::AnyBrick<GetResult<BlockType>, GetReason<BlockType>> AnyBrickType;
+template<typename Iterator>
+internal::any_of_return_t<Iterator> any_of(Iterator begin, Iterator end) {
+    typedef internal::any_of_return_t<Iterator> block_type;
+    typedef ll::any_brick<get_result_t<block_type>, get_reason_t<block_type>> any_brick_type;
 
-    return ll::packBrick<AnyBrickType>(ll::makeUnpackIterator(begin), ll::makeUnpackIterator(end));
+    return ll::pack_brick<any_brick_type>(ll::make_unpack_iterator(begin), ll::make_unpack_iterator(end));
 }
 
-template<typename RangeT>
-typename internal::AnyOfRangeTraits<RangeT &&>::BlockType anyOf(RangeT && range) {
-    typedef internal::AnyOfRangeTraits<RangeT &&> Traits;
-    return anyOf(Traits::doBegin(std::forward<RangeT>(range)), Traits::doEnd(std::forward<RangeT>(range)));
+template<typename Range>
+typename internal::any_of_range_traits<Range &&>::block_type any_of(Range && range) {
+    typedef internal::any_of_range_traits<Range &&> traits;
+    return any_of(traits::do_begin(std::forward<Range>(range)), traits::do_end(std::forward<Range>(range)));
 }
 
-UndBlock hold();
+und_block hold();
 
 } // namespace abb
 

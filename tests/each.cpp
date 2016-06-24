@@ -9,7 +9,7 @@ public:
     Verify123(Verify123 const&) = delete;
     Verify123(Verify123 &&) = default;
 
-    abb::VoidBlock operator()(int elem) {
+    abb::void_block operator()(int elem) {
         ++this->counter;
         REQUIRE_EQUAL(this->counter, elem);
         HIT();
@@ -22,7 +22,7 @@ private:
 
 class VerifyUnique123 : Verify123 {
 public:
-    abb::VoidBlock operator()(std::unique_ptr<int> elem) {
+    abb::void_block operator()(std::unique_ptr<int> elem) {
         return this->Verify123::operator()(*elem);
     }
 };
@@ -31,13 +31,13 @@ std::unique_ptr<int> uniqueInt(int value) {
     return std::unique_ptr<int>(new int(value));
 }
 
-abb::VoidBlock testSuccess() {
+abb::void_block testSuccess() {
     EXPECT_HITS(3);
 
     struct Impl {
         Impl(): elems({1, 2, 3}) {}
 
-        abb::VoidBlock operator()() {
+        abb::void_block operator()() {
             return abb::each(elems.begin(), elems.end(), Verify123());
         }
 
@@ -47,7 +47,7 @@ abb::VoidBlock testSuccess() {
     return abb::make<Impl>();
 }
 
-abb::VoidBlock testWithMoveIterator() {
+abb::void_block testWithMoveIterator() {
     EXPECT_HITS(3);
 
     struct Impl {
@@ -57,7 +57,7 @@ abb::VoidBlock testWithMoveIterator() {
             this->elems.push_back(uniqueInt(3));
         }
 
-        abb::VoidBlock operator()() {
+        abb::void_block operator()() {
             return abb::each(
                 std::make_move_iterator(elems.begin()),
                 std::make_move_iterator(elems.end()),
@@ -71,7 +71,7 @@ abb::VoidBlock testWithMoveIterator() {
     return abb::make<Impl>();
 }
 
-abb::VoidBlock testRangeSuccess() {
+abb::void_block testRangeSuccess() {
     EXPECT_HITS(3);
 
     std::vector<int> elems = {1, 2, 3};
@@ -96,7 +96,7 @@ std::move_iterator<std::unique_ptr<int>*> end(Movable123 & col) {
 
 } // namespace adlns
 
-abb::VoidBlock testRangeWithMoveIterator() {
+abb::void_block testRangeWithMoveIterator() {
     EXPECT_HITS(3);
 
     return abb::each(adlns::Movable123(), VerifyUnique123());

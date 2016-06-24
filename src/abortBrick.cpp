@@ -1,4 +1,4 @@
-#include <abb/ll/abortBrick.h>
+#include <abb/ll/abort_brick.h>
 
 namespace abb {
 namespace ll {

@@ -9,18 +9,18 @@
 namespace abb {
 namespace ll {
 
-class AbortBrick : public Brick<Und, Und> {
+class abort_brick : public brick<und_t, und_t> {
 public:
-    AbortBrick() {}
+    abort_brick() {}
 
     void abort() {}
 
-    void start(Successor & successor) {
-        successor.onUpdate();
+    void start(successor & succ) {
+        succ.on_update();
     }
 
-    Status getStatus() const {
-        return ABORT;
+    status get_status() const {
+        return abort_status;
     }
 };
 

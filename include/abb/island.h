@@ -14,79 +14,79 @@
 
 namespace abb {
 
-class Island;
+class island;
 
 namespace internal {
 
-template<typename ArgT>
-inline auto doEnqueue(Island & island, ArgT && arg) ->
-    decltype(enqueue(island, std::forward<ArgT>(arg)))
+template<typename Arg>
+inline auto do_enqueue(island & target, Arg && arg) ->
+    decltype(enqueue(target, std::forward<Arg>(arg)))
 {
-    return enqueue(island, std::forward<ArgT>(arg));
+    return enqueue(target, std::forward<Arg>(arg));
 }
 
-template<typename ArgT>
-inline auto doEnqueueExternal(Island & island, ArgT && arg) ->
-    decltype(enqueueExternal(island, std::forward<ArgT>(arg)))
+template<typename Arg>
+inline auto do_enqueue_external(island & target, Arg && arg) ->
+    decltype(enqueue_external(target, std::forward<Arg>(arg)))
 {
-    return enqueueExternal(island, std::forward<ArgT>(arg));
+    return enqueue_external(target, std::forward<Arg>(arg));
 }
 
 
 } // namespace internal
 
-class Island : utils::Noncopyable {
+class island : utils::noncopyable {
 public:
-    Island();
+    island();
 
-    ~Island();
+    ~island();
 
-    template<typename ArgT>
-    auto enqueue(ArgT && arg) -> decltype(internal::doEnqueue(*this, std::forward<ArgT>(arg))) {
-        return internal::doEnqueue(*this, std::forward<ArgT>(arg));
+    template<typename Arg>
+    auto enqueue(Arg && arg) -> decltype(internal::do_enqueue(*this, std::forward<Arg>(arg))) {
+        return internal::do_enqueue(*this, std::forward<Arg>(arg));
     }
 
-    template<typename ArgT>
-    auto enqueueExternal(ArgT && arg) -> decltype(internal::doEnqueueExternal(*this, std::forward<ArgT>(arg))) {
-        return internal::doEnqueueExternal(*this, std::forward<ArgT>(arg));
+    template<typename Arg>
+    auto enqueue_external(Arg && arg) -> decltype(internal::do_enqueue_external(*this, std::forward<Arg>(arg))) {
+        return internal::do_enqueue_external(*this, std::forward<Arg>(arg));
     }
 
-    void increfExternal();
-    void decrefExternal();
+    void incref_external();
+    void decref_external();
 
     void run();
 
-    static Island & current();
+    static island & current();
 
 private:
-    void enqueueTask(Task & task);
-    void enqueueTaskExternal(Task & task);
+    void enqueue_task(task & to_enqueue);
+    void enqueue_task_external(task & to_enqueue);
 
-    TaskQueue tasks;
+    task_queue tasks;
 
     std::mutex mutex;
     std::condition_variable condition;
-    TaskQueue externalTasks;
-    std::size_t externalCounter;
+    task_queue external_tasks;
+    std::size_t external_counter;
 
-    static Island * currentPtr;
+    static island * current_ptr;
 
-    friend void enqueue(Island & island, Task & task) {
-        island.enqueueTask(task);
+    friend void enqueue(island & target, task & to_enqueue) {
+        target.enqueue_task(to_enqueue);
     }
 
-    friend void enqueueExternal(Island & island, Task & task) {
-        island.enqueueTaskExternal(task);
+    friend void enqueue_external(island & target, task & to_enqueue) {
+        target.enqueue_task_external(to_enqueue);
     }
 };
 
 namespace internal {
 
-template<typename FuncT>
-class FunctorTask : public Task {
+template<typename Func>
+class functor_task : public task {
 public:
-    explicit FunctorTask(FuncT && func): func(std::forward<FuncT>(func)) {}
-    explicit FunctorTask(FuncT const& func): func(func) {}
+    explicit functor_task(Func && func): func(std::forward<Func>(func)) {}
+    explicit functor_task(Func const& func): func(func) {}
 
     virtual void run();
 
@@ -94,8 +94,8 @@ private:
     std::function<void()> func;
 };
 
-template<typename FuncT>
-void FunctorTask<FuncT>::run() {
+template<typename Func>
+void functor_task<Func>::run() {
     this->func();
     delete this;
 }
@@ -103,21 +103,21 @@ void FunctorTask<FuncT>::run() {
 } // namespace internal
 
 template<
-    typename FuncT,
-    typename std::enable_if<std::is_same<typename std::result_of<FuncT()>::type, void>::value>::type* = nullptr
+    typename Func,
+    typename std::enable_if<std::is_same<typename std::result_of<Func()>::type, void>::value>::type* = nullptr
 >
-void enqueue(Island & island, FuncT && func) {
-    Task * task = new internal::FunctorTask<typename std::decay<FuncT>::type>(func);
-    island.enqueue(*task);
+void enqueue(island & target, Func && func) {
+    task * to_enqueue = new internal::functor_task<typename std::decay<Func>::type>(func);
+    target.enqueue(*to_enqueue);
 }
 
 template<
-    typename FuncT,
-    typename std::enable_if<std::is_same<typename std::result_of<FuncT()>::type, void>::value>::type* = nullptr
+    typename Func,
+    typename std::enable_if<std::is_same<typename std::result_of<Func()>::type, void>::value>::type* = nullptr
 >
-void enqueueExternal(Island & island, FuncT && func) {
-    Task * task = new internal::FunctorTask<typename std::decay<FuncT>::type>(func);
-    island.enqueueExternal(*task);
+void enqueue_external(island & target, Func && func) {
+    task * to_enqueue = new internal::functor_task<typename std::decay<Func>::type>(func);
+    target.enqueue_external(*to_enqueue);
 }
 
 } // namespace abb

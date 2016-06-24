@@ -23,7 +23,7 @@ private:
     std::uint32_t hits;
     std::uint32_t expectedHits;
 
-    static HitCounter * currentPtr;
+    static HitCounter * current_ptr;
 };
 
 #define HIT(...) (HitCounter::current().hit(__VA_ARGS__))
@@ -35,42 +35,42 @@ struct Runner {
     }
 
     HitCounter hitCounter;
-    abb::Island island;
+    abb::island island;
 };
 
-template<typename FuncT, typename ReturnT>
+template<typename Func, typename Return>
 struct FunctionRunner {};
 
-template<typename FuncT>
-struct FunctionRunner<FuncT, void> : Runner {
-    void run(FuncT func) {
-        this->island.enqueueExternal(func);
+template<typename Func>
+struct FunctionRunner<Func, void> : Runner {
+    void run(Func func) {
+        this->island.enqueue_external(func);
         this->Runner::run();
     }
 };
 
-template<typename FuncT>
-struct FunctionRunner<FuncT, abb::Block<void>> : Runner {
-    void run(FuncT func) {
-        this->island.enqueueExternal(std::bind(&FunctionRunner::runAndEnqueue, this, func));
+template<typename Func>
+struct FunctionRunner<Func, abb::block<void>> : Runner {
+    void run(Func func) {
+        this->island.enqueue_external(std::bind(&FunctionRunner::runAndEnqueue, this, func));
         this->Runner::run();
     }
 
 private:
-    void runAndEnqueue(FuncT func) {
+    void runAndEnqueue(Func func) {
         this->island.enqueue(func());
     }
 };
 
-template<typename FuncT>
-void runFunction(FuncT func) {
-    FunctionRunner<FuncT, typename std::result_of<FuncT()>::type>().run(func);
+template<typename Func>
+void runFunction(Func func) {
+    FunctionRunner<Func, typename std::result_of<Func()>::type>().run(func);
 }
 
 template<typename ClassT>
 void runClass() {
-    typedef std::reference_wrapper<ClassT> FuncT;
-    FunctionRunner<FuncT, typename std::result_of<FuncT()>::type> runner;
+    typedef std::reference_wrapper<ClassT> Func;
+    FunctionRunner<Func, typename std::result_of<Func()>::type> runner;
     ClassT obj;
     runner.run(std::ref(obj));
 }
@@ -107,27 +107,27 @@ void runClass() {
         } \
     } while (0)
 
-template<typename ValueT>
+template<typename Value>
 struct IgnoreValueImpl {};
 
-template<typename... ArgsT>
-struct IgnoreValueImpl<void(ArgsT...)> {
-    struct Type {
-        abb::VoidBlock operator()(ArgsT...) {
+template<typename... Args>
+struct IgnoreValueImpl<void(Args...)> {
+    struct type {
+        abb::void_block operator()(Args...) {
             return abb::success();
         }
     };
 };
 
 template<>
-struct IgnoreValueImpl<abb::Und> {
-    typedef abb::Und Type;
+struct IgnoreValueImpl<abb::und_t> {
+    typedef abb::und_t type;
 };
 
-template<typename BlockT>
-using IgnoreResult = typename IgnoreValueImpl<abb::GetResult<BlockT>>::Type;
+template<typename Block>
+using IgnoreResult = typename IgnoreValueImpl<abb::get_result_t<Block>>::type;
 
-template<typename BlockT>
-using IgnoreReason = typename IgnoreValueImpl<abb::GetReason<BlockT>>::Type;
+template<typename Block>
+using IgnoreReason = typename IgnoreValueImpl<abb::get_reason_t<Block>>::type;
 
 #endif // TESTS_HELPERS_BASE_H

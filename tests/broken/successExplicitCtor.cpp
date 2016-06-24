@@ -13,5 +13,5 @@ struct B {
 };
 
 void test() {
-    abb::success<abb::Block<B>>((A()));
+    abb::success<abb::block<B>>((A()));
 }

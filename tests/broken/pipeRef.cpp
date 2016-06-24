@@ -6,7 +6,7 @@
 #define MUTABLE
 #endif
 
-abb::VoidBlock ignore(int MUTABLE &) {
+abb::void_block ignore(int MUTABLE &) {
     return abb::success();
 }
 

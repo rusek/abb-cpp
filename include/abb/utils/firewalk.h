@@ -6,18 +6,18 @@
 namespace abb {
 namespace utils {
 
-template<typename IteratorT>
-class FirewalkIterator {
+template<typename Iterator>
+class firewalk_iterator {
 private:
-    IteratorT wrapped;
+    Iterator wrapped;
 public:
-    explicit FirewalkIterator(IteratorT wrapped): wrapped(wrapped) {}
+    explicit firewalk_iterator(Iterator wrapped): wrapped(wrapped) {}
 
-    bool operator!=(FirewalkIterator<IteratorT> const& other) const {
+    bool operator!=(firewalk_iterator<Iterator> const& other) const {
         return this->wrapped != other.wrapped;
     }
 
-    FirewalkIterator<IteratorT> & operator++() {
+    firewalk_iterator<Iterator> & operator++() {
         return *this;
     }
 
@@ -28,29 +28,29 @@ public:
     }
 };
 
-template<typename RangeT>
-class FirewalkRange {
+template<typename Range>
+class firewalk_range {
 private:
-    typedef decltype(std::declval<RangeT>().begin()) IteratorType;
+    typedef decltype(std::declval<Range>().begin()) iterator;
 
 public:
-    explicit FirewalkRange(RangeT range): range(range) {}
+    explicit firewalk_range(Range range): range(range) {}
 
-    FirewalkIterator<IteratorType> begin() {
-        return FirewalkIterator<IteratorType>(this->range.begin());
+    firewalk_iterator<iterator> begin() {
+        return firewalk_iterator<iterator>(this->range.begin());
     }
 
-    FirewalkIterator<IteratorType> end() {
-        return FirewalkIterator<IteratorType>(this->range.end());
+    firewalk_iterator<iterator> end() {
+        return firewalk_iterator<iterator>(this->range.end());
     }
 
 private:
-    RangeT range;
+    Range range;
 };
 
-template<typename RangeT>
-inline FirewalkRange<RangeT &> firewalk(RangeT & range) {
-    return FirewalkRange<RangeT &>(range);
+template<typename Range>
+inline firewalk_range<Range &> firewalk(Range & range) {
+    return firewalk_range<Range &>(range);
 }
 
 } // namespace utils

@@ -1,18 +1,18 @@
 #include "base.h"
 
-HitCounter * HitCounter::currentPtr = nullptr;
+HitCounter * HitCounter::current_ptr = nullptr;
 
 HitCounter::HitCounter():
     hits(0),
     expectedHits(0)
 {
-    ABB_ASSERT(HitCounter::currentPtr == nullptr, "HitCounter instance already set");
-    HitCounter::currentPtr = this;
+    ABB_ASSERT(HitCounter::current_ptr == nullptr, "HitCounter instance already set");
+    HitCounter::current_ptr = this;
 }
 
 HitCounter::~HitCounter() {
     REQUIRE_EQUAL(this->hits, this->expectedHits);
-    HitCounter::currentPtr = nullptr;
+    HitCounter::current_ptr = nullptr;
 }
 
 void HitCounter::hit() {
@@ -30,6 +30,6 @@ void HitCounter::expectHits(std::uint32_t expectedHits) {
 }
 
 HitCounter & HitCounter::current() {
-    ABB_ASSERT(HitCounter::currentPtr != nullptr, "HitCounter instance not set");
-    return *HitCounter::currentPtr;
+    ABB_ASSERT(HitCounter::current_ptr != nullptr, "HitCounter instance not set");
+    return *HitCounter::current_ptr;
 }

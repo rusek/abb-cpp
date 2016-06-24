@@ -3,72 +3,72 @@
 
 namespace abb {
 
-Island * Island::currentPtr = nullptr;
+island * island::current_ptr = nullptr;
 
-Island::Island(): externalCounter(0) {}
+island::island(): external_counter(0) {}
 
-Island::~Island() {}
+island::~island() {}
 
-void Island::enqueueTask(Task & task) {
-    ABB_ASSERT(Island::currentPtr == this, "Not a current island");
-    this->tasks.pushBack(task);
+void island::enqueue_task(task & to_enqueue) {
+    ABB_ASSERT(island::current_ptr == this, "Not a current island");
+    this->tasks.push_back(to_enqueue);
 }
 
-void Island::enqueueTaskExternal(Task & task) {
+void island::enqueue_task_external(task & to_enqueue) {
     std::unique_lock<std::mutex> lock(this->mutex);
-    bool wasEmpty = this->externalTasks.empty();
-    this->externalTasks.pushBack(task);
-    if (wasEmpty) {
+    bool was_empty = this->external_tasks.empty();
+    this->external_tasks.push_back(to_enqueue);
+    if (was_empty) {
         this->condition.notify_one();
     }
 }
 
-void Island::increfExternal() {
+void island::incref_external() {
     std::unique_lock<std::mutex> lock(this->mutex);
-    this->externalCounter++;
+    this->external_counter++;
 }
 
-void Island::decrefExternal() {
+void island::decref_external() {
     std::unique_lock<std::mutex> lock(this->mutex);
-    ABB_ASSERT(this->externalCounter > 0, "External counter is zero");
-    this->externalCounter--;
-    if (!this->externalCounter) {
+    ABB_ASSERT(this->external_counter > 0, "External counter is zero");
+    this->external_counter--;
+    if (!this->external_counter) {
         this->condition.notify_one();
     }
 }
 
-void Island::run() {
-    ABB_ASSERT(Island::currentPtr == nullptr, "Current island already set");
-    Island::currentPtr = this;
+void island::run() {
+    ABB_ASSERT(island::current_ptr == nullptr, "Current island already set");
+    island::current_ptr = this;
 
     while (true) {
-        Task * task;
+        task * to_run;
         {
             std::unique_lock<std::mutex> lock(this->mutex);
-            while (this->externalCounter > 0 && this->externalTasks.empty()) {
+            while (this->external_counter > 0 && this->external_tasks.empty()) {
                 this->condition.wait(lock);
             }
 
-            if (this->externalTasks.empty()) {
+            if (this->external_tasks.empty()) {
                 break;
             }
 
-            task = &this->externalTasks.popFront();
+            to_run = &this->external_tasks.pop_front();
         }
-        task->run();
+        to_run->run();
 
         while (!this->tasks.empty()) {
-            this->tasks.popFront().run();
+            this->tasks.pop_front().run();
         }
     }
 
-    ABB_ASSERT(Island::currentPtr == this, "Current island changed in the meantime");
-    Island::currentPtr = nullptr;
+    ABB_ASSERT(island::current_ptr == this, "Current island changed in the meantime");
+    island::current_ptr = nullptr;
 }
 
-Island & Island::current() {
-    ABB_ASSERT(Island::currentPtr != nullptr, "Current island not set");
-    return *Island::currentPtr;
+island & island::current() {
+    ABB_ASSERT(island::current_ptr != nullptr, "Current island not set");
+    return *island::current_ptr;
 }
 
 } // namespace abb

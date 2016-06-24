@@ -1,77 +1,77 @@
 #ifndef ABB_LL_BRIDGE_H
 #define ABB_LL_BRIDGE_H
 
-#include <abb/blockFwd.h>
+#include <abb/block_fwd.h>
 #include <abb/ll/brick.h>
-#include <abb/ll/brickPtr.h>
+#include <abb/ll/brick_ptr.h>
 
 namespace abb {
 namespace ll {
 
-template<typename ResultT, typename ReasonT>
-inline BaseBlock<ResultT, ReasonT> packBrickPtr(BrickPtr<ResultT, ReasonT> && brick) {
-    return BaseBlock<ResultT, ReasonT>(std::move(brick));
+template<typename Result, typename Reason>
+inline base_block<Result, Reason> pack_brick_ptr(brick_ptr<Result, Reason> && brick) {
+    return base_block<Result, Reason>(std::move(brick));
 }
 
-template<typename ResultT, typename ReasonT>
-inline BrickPtr<ResultT, ReasonT> unpackBrickPtr(BaseBlock<ResultT, ReasonT> && block) {
-    return block.takeBrick();
+template<typename Result, typename Reason>
+inline brick_ptr<Result, Reason> unpack_brick_ptr(base_block<Result, Reason> && block) {
+    return block.take_brick();
 }
 
-template<typename BrickT, typename... ArgsT>
-inline GetBlock<BrickT> packBrick(ArgsT &&... args) {
-    return packBrickPtr(makeBrick<BrickT>(std::forward<ArgsT>(args)...));
+template<typename Brick, typename... Args>
+inline get_block_t<Brick> pack_brick(Args &&... args) {
+    return pack_brick_ptr(make_brick<Brick>(std::forward<Args>(args)...));
 }
 
-template<typename ContT>
-class Unpacker {
+template<typename Cont>
+class unpacker {
 private:
-    ContT cont; // must be present before operator()
+    Cont cont; // must be present before operator()
 
 public:
-    template<typename... ArgsT>
-    explicit Unpacker(ArgsT &&... args): cont(std::forward<ArgsT>(args)...) {}
+    template<typename... Args>
+    explicit unpacker(Args &&... args): cont(std::forward<Args>(args)...) {}
 
-    template<typename... ArgsT>
-    auto operator()(ArgsT &&... args) & ->
-        decltype(unpackBrickPtr(this->cont(std::forward<ArgsT>(args)...)))
+    template<typename... Args>
+    auto operator()(Args &&... args) & ->
+        decltype(unpack_brick_ptr(this->cont(std::forward<Args>(args)...)))
     {
-        return unpackBrickPtr(this->cont(std::forward<ArgsT>(args)...));
+        return unpack_brick_ptr(this->cont(std::forward<Args>(args)...));
     }
 
-    template<typename... ArgsT>
-    auto operator()(ArgsT &&... args) && ->
-        decltype(unpackBrickPtr(std::move(this->cont)(std::forward<ArgsT>(args)...)))
+    template<typename... Args>
+    auto operator()(Args &&... args) && ->
+        decltype(unpack_brick_ptr(std::move(this->cont)(std::forward<Args>(args)...)))
     {
-        return unpackBrickPtr(std::move(this->cont)(std::forward<ArgsT>(args)...));
+        return unpack_brick_ptr(std::move(this->cont)(std::forward<Args>(args)...));
     }
 };
 
-template<typename IteratorT>
-class UnpackIterator {
+template<typename Iterator>
+class unpack_iterator {
 private:
-    IteratorT wrapped; // must be present before operator*
+    Iterator wrapped; // must be present before operator*
 
 public:
-    explicit UnpackIterator(IteratorT wrapped): wrapped(wrapped) {}
+    explicit unpack_iterator(Iterator wrapped): wrapped(wrapped) {}
 
-    bool operator!=(UnpackIterator<IteratorT> const& other) {
+    bool operator!=(unpack_iterator<Iterator> const& other) {
         return this->wrapped != other.wrapped;
     }
 
-    UnpackIterator<IteratorT> & operator++() {
+    unpack_iterator<Iterator> & operator++() {
         ++this->wrapped;
         return *this;
     }
 
-    auto operator*() -> decltype(ll::unpackBrickPtr(*this->wrapped)) {
-        return ll::unpackBrickPtr(*this->wrapped);
+    auto operator*() -> decltype(ll::unpack_brick_ptr(*this->wrapped)) {
+        return ll::unpack_brick_ptr(*this->wrapped);
     }
 };
 
-template<typename IteratorT>
-inline UnpackIterator<IteratorT> makeUnpackIterator(IteratorT it) {
-    return UnpackIterator<IteratorT>(it);
+template<typename Iterator>
+inline unpack_iterator<Iterator> make_unpack_iterator(Iterator it) {
+    return unpack_iterator<Iterator>(it);
 }
 
 } // namespace ll

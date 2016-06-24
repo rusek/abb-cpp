@@ -5,108 +5,108 @@
 
 namespace abb {
 
-class Und {};
+class und_t {};
 
-class Pass {};
+class pass_t {};
 
 namespace internal {
 
-template<typename ArgT>
-struct NormalizeArgImpl {
-    typedef ArgT Type;
+template<typename Arg>
+struct normalize_arg {
+    typedef Arg type;
 };
 
-template<typename ArgT>
-struct NormalizeArgImpl<std::reference_wrapper<ArgT>> {
-    typedef ArgT & Type;
+template<typename Arg>
+struct normalize_arg<std::reference_wrapper<Arg>> {
+    typedef Arg & type;
 };
 
-template<typename ArgT>
-using NormalizeArg = typename NormalizeArgImpl<ArgT>::Type;
+template<typename Arg>
+using normalize_arg_t = typename normalize_arg<Arg>::type;
 
-template<typename ValueT>
-struct NormalizeValueImpl {
-    typedef void Type(NormalizeArg<ValueT>);
-};
-
-template<>
-struct NormalizeValueImpl<Und> {
-    typedef Und Type;
-};
-
-template<typename ReturnT, typename... ArgsT>
-struct NormalizeValueImpl<ReturnT(ArgsT...)> {};
-
-template<typename... ArgsT>
-struct NormalizeValueImpl<void(ArgsT...)> {
-    typedef void Type(NormalizeArg<ArgsT>...);
+template<typename Value>
+struct normalize_value {
+    typedef void type(normalize_arg_t<Value>);
 };
 
 template<>
-struct NormalizeValueImpl<void> {
-    typedef void Type();
+struct normalize_value<und_t> {
+    typedef und_t type;
+};
+
+template<typename Return, typename... Args>
+struct normalize_value<Return(Args...)> {};
+
+template<typename... Args>
+struct normalize_value<void(Args...)> {
+    typedef void type(normalize_arg_t<Args>...);
+};
+
+template<>
+struct normalize_value<void> {
+    typedef void type();
 };
 
 } // namespace internal
 
-const Und und;
+const und_t und;
 
-const Pass pass;
+const pass_t pass;
 
-template<typename ValueT>
-struct IsUnd : std::is_same<ValueT, Und> {};
+template<typename Value>
+struct is_und : std::is_same<Value, und_t> {};
 
-template<typename ValueT>
-struct IsPass : std::is_same<ValueT, Pass> {};
+template<typename Value>
+struct is_pass : std::is_same<Value, pass_t> {};
 
-template<typename ValueT>
-struct IsSpecial : std::integral_constant<bool, IsUnd<ValueT>::value || IsPass<ValueT>::value> {};
+template<typename Value>
+struct is_special : std::integral_constant<bool, is_und<Value>::value || is_pass<Value>::value> {};
 
-template<typename ArgT>
-using GetResult = typename ArgT::ResultType;
+template<typename Arg>
+using get_result_t = typename Arg::result;
 
-template<typename ArgT>
-using GetReason = typename ArgT::ReasonType;
+template<typename Arg>
+using get_reason_t = typename Arg::reason;
 
-template<typename ValueT>
-using NormalizeValue = typename internal::NormalizeValueImpl<ValueT>::Type;
+template<typename Value>
+using normalize_value_t = typename internal::normalize_value<Value>::type;
 
-template<typename ValueT, typename OtherValueT>
-struct IsValueSubstitutable : std::integral_constant<
+template<typename Value, typename OtherValue>
+struct is_value_substitutable : std::integral_constant<
     bool,
-    std::is_same<ValueT, OtherValueT>::value ||
-        std::is_same<OtherValueT, Und>::value
+    std::is_same<Value, OtherValue>::value ||
+        std::is_same<OtherValue, und_t>::value
 > {};
 
 namespace internal {
 
-template<typename... TypesT>
-struct CommonValueImpl {};
+template<typename... Types>
+struct common_value {};
 
 template<>
-struct CommonValueImpl<> {
-    typedef Und Type;
+struct common_value<> {
+    typedef und_t type;
 };
 
-template<typename TypeT>
-struct CommonValueImpl<TypeT> {
-    typedef TypeT Type;
+template<typename Type>
+struct common_value<Type> {
+    typedef Type type;
 };
 
-template<typename FirstT, typename SecondT>
-struct CommonValueImpl<FirstT, SecondT> {
-    typedef typename std::conditional<IsUnd<FirstT>::value, SecondT, FirstT>::type Type;
-    static_assert(IsValueSubstitutable<Type, SecondT>::value, "Incompatible types");
+template<typename First, typename Second>
+struct common_value<First, Second> {
+    typedef typename std::conditional<is_und<First>::value, Second, First>::type type;
+    static_assert(is_value_substitutable<type, Second>::value, "Incompatible types");
 };
 
-template<typename FirstT, typename SecondT, typename... TypesT>
-struct CommonValueImpl<FirstT, SecondT, TypesT...> :
-    CommonValueImpl<typename CommonValueImpl<FirstT, SecondT>::Type, TypesT...> {};
+template<typename First, typename Second, typename... Types>
+struct common_value<First, Second, Types...> :
+    common_value<typename common_value<First, Second>::type, Types...> {};
 
 } // namespace internal
 
-template<typename... TypesT>
-using CommonValue = typename internal::CommonValueImpl<TypesT...>::Type;
+template<typename... Types>
+using common_value_t = typename internal::common_value<Types...>::type;
 
 } // namespace abb
 

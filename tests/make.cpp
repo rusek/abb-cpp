@@ -13,12 +13,12 @@ public:
         HIT(4);
     }
 
-    abb::VoidBlock operator()();
+    abb::void_block operator()();
 private:
     std::uint32_t i;
 };
 
-abb::VoidBlock MakeTester::operator()() {
+abb::void_block MakeTester::operator()() {
     this->i++;
     HIT(this->i);
     if (i == 3) {
@@ -28,7 +28,7 @@ abb::VoidBlock MakeTester::operator()() {
     }
 }
 
-abb::VoidBlock testDestroyedAfterCompletion() {
+abb::void_block testDestroyedAfterCompletion() {
     EXPECT_HITS(6);
 
     return abb::make<MakeTester>().pipe([]() {

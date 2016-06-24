@@ -6,54 +6,54 @@
 namespace abb {
 
 
-class Task {
+class task {
 public:
-    Task(): next(nullptr) {}
+    task(): next(nullptr) {}
 
-    virtual ~Task() {}
+    virtual ~task() {}
 
     virtual void run() = 0;
 
 private:
-    Task * next;
+    task * next;
 
-    friend class TaskQueue;
+    friend class task_queue;
 };
 
-class TaskQueue {
+class task_queue {
 public:
-    TaskQueue(): last(nullptr) {}
+    task_queue(): last(nullptr) {}
 
     bool empty() const {
         return this->last == nullptr;
     }
 
-    void pushBack(Task & task) {
-        ABB_ASSERT(task.next == nullptr, "Task already queued");
+    void push_back(task & queued) {
+        ABB_ASSERT(queued.next == nullptr, "task already queued");
         if (this->last) {
-            task.next = this->last->next;
-            this->last->next = &task;
+            queued.next = this->last->next;
+            this->last->next = &queued;
 
         } else {
-            task.next = &task;
+            queued.next = &queued;
         }
-        this->last = &task;
+        this->last = &queued;
     }
 
-    Task & popFront() {
-        ABB_ASSERT(this->last, "Task queue is empty");
-        Task & task = *this->last->next;
-        if (task.next == &task) {
+    task & pop_front() {
+        ABB_ASSERT(this->last, "task queue is empty");
+        task & popped = *this->last->next;
+        if (popped.next == &popped) {
             this->last = nullptr;
         } else {
-            this->last->next = task.next;
+            this->last->next = popped.next;
         }
-        task.next = nullptr;
-        return task;
+        popped.next = nullptr;
+        return popped;
     }
 
 private:
-    Task * last;
+    task * last;
 };
 
 

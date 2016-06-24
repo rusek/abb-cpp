@@ -1,14 +1,14 @@
 #include "helpers/base.h"
 
-abb::VoidBlock testSuccess() {
+abb::void_block testSuccess() {
     EXPECT_HITS(3);
     return abb::chain(
         abb::success(),
-        abb::make<std::function<abb::VoidBlock()>>([]() {
+        abb::make<std::function<abb::void_block()>>([]() {
             HIT(0);
             return abb::success();
         }),
-        abb::make<std::function<abb::VoidBlock()>>([]() {
+        abb::make<std::function<abb::void_block()>>([]() {
             HIT(1);
             return abb::success();
         }),
@@ -18,12 +18,12 @@ abb::VoidBlock testSuccess() {
     );
 }
 
-abb::VoidBlock testError() {
-    typedef abb::Block<void, void> BlockType;
+abb::void_block testError() {
+    typedef abb::block<void, void> block_type;
     EXPECT_HITS(1);
     return abb::chain(
-        abb::error<BlockType>(),
-        abb::make<std::function<abb::VoidBlock()>>([]() {
+        abb::error<block_type>(),
+        abb::make<std::function<abb::void_block()>>([]() {
             FAILURE("should not be called");
             return abb::success();
         })
@@ -32,15 +32,15 @@ abb::VoidBlock testError() {
     });
 }
 
-abb::VoidBlock testOneArgument() {
+abb::void_block testOneArgument() {
     EXPECT_HITS(1);
-    return abb::chain(abb::make<std::function<abb::VoidBlock()>>([]() {
+    return abb::chain(abb::make<std::function<abb::void_block()>>([]() {
         HIT();
         return abb::success();
     }));
 }
 
-abb::VoidBlock testVariousResults() {
+abb::void_block testVariousResults() {
     return abb::chain(
         abb::success(5),
         [](int val) {

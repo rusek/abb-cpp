@@ -5,16 +5,16 @@
 
 namespace abb {
 
-template<typename ResultT, typename ReasonT>
-inline BaseBlock<ResultT, ReasonT> chain(BaseBlock<ResultT, ReasonT> && block) {
+template<typename Result, typename Reason>
+inline base_block<Result, Reason> chain(base_block<Result, Reason> && block) {
     return std::move(block);
 }
 
-template<typename ResultT, typename ReasonT, typename ContT, typename... ContsT>
-inline auto chain(BaseBlock<ResultT, ReasonT> && block, ContT && cont, ContsT &&... conts) ->
-    decltype(chain(std::move(block).pipe(std::forward<ContT>(cont)), std::forward<ContsT>(conts)... ))
+template<typename Result, typename Reason, typename Cont, typename... Conts>
+inline auto chain(base_block<Result, Reason> && block, Cont && cont, Conts &&... conts) ->
+    decltype(chain(std::move(block).pipe(std::forward<Cont>(cont)), std::forward<Conts>(conts)... ))
 {
-    return chain(std::move(block).pipe(std::forward<ContT>(cont)), std::forward<ContsT>(conts)... );
+    return chain(std::move(block).pipe(std::forward<Cont>(cont)), std::forward<Conts>(conts)... );
 }
 
 } // namespace abb

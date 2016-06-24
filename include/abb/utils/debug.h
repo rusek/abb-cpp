@@ -8,13 +8,13 @@ namespace abb {
 namespace utils {
 namespace internal {
 
-struct FiascoInfo {
+struct fiasco_info {
     const char * file;
     std::uint32_t line;
     const char * msg;
 };
 
-[[noreturn]] void fiasco(FiascoInfo const& info);
+[[noreturn]] void fiasco(fiasco_info const& info);
 void trace(char const* file, std::uint32_t line, char const* msg);
 
 #if 1
@@ -31,12 +31,12 @@ void trace(char const* file, std::uint32_t line, char const* msg);
 
 #define ABB_FIASCO(msg) \
     do { \
-        static const ::abb::utils::internal::FiascoInfo __fiascoInfo = { \
+        static const ::abb::utils::internal::fiasco_info __fiasco_info = { \
             __FILE__, \
             __LINE__, \
             (msg) \
         }; \
-        ::abb::utils::internal::fiasco(__fiascoInfo); \
+        ::abb::utils::internal::fiasco(__fiasco_info); \
     } while (0)
 
 #define ABB_ASSERT(cond, msg) \

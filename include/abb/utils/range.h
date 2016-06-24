@@ -8,14 +8,14 @@ namespace abb_adl {
 using std::begin;
 using std::end;
 
-template<typename ArgT>
-inline auto doBegin(ArgT && arg) -> decltype(begin(std::forward<ArgT>(arg))) {
-    return begin(std::forward<ArgT>(arg));
+template<typename Arg>
+inline auto do_begin(Arg && arg) -> decltype(begin(std::forward<Arg>(arg))) {
+    return begin(std::forward<Arg>(arg));
 }
 
-template<typename ArgT>
-inline auto doEnd(ArgT && arg) -> decltype(end(std::forward<ArgT>(arg))) {
-    return end(std::forward<ArgT>(arg));
+template<typename Arg>
+inline auto do_end(Arg && arg) -> decltype(end(std::forward<Arg>(arg))) {
+    return end(std::forward<Arg>(arg));
 }
 
 } // namespace abb_adl
@@ -23,14 +23,14 @@ inline auto doEnd(ArgT && arg) -> decltype(end(std::forward<ArgT>(arg))) {
 namespace abb {
 namespace utils {
 
-template<typename ArgT>
-inline auto begin(ArgT && arg) -> decltype(abb_adl::doBegin(std::forward<ArgT>(arg))) {
-    return abb_adl::doBegin(std::forward<ArgT>(arg));
+template<typename Arg>
+inline auto begin(Arg && arg) -> decltype(abb_adl::do_begin(std::forward<Arg>(arg))) {
+    return abb_adl::do_begin(std::forward<Arg>(arg));
 }
 
-template<typename ArgT>
-inline auto end(ArgT && arg) -> decltype(abb_adl::doEnd(std::forward<ArgT>(arg))) {
-    return abb_adl::doEnd(std::forward<ArgT>(arg));
+template<typename Arg>
+inline auto end(Arg && arg) -> decltype(abb_adl::do_end(std::forward<Arg>(arg))) {
+    return abb_adl::do_end(std::forward<Arg>(arg));
 }
 
 } // namespace utils

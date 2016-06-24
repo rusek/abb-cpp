@@ -8,104 +8,104 @@
 namespace abb {
 namespace ll {
 
-template<typename ValueT>
-class Store;
+template<typename Value>
+class store;
 
-template<typename ValueT, std::size_t IndexV>
-class StoreGetter {};
+template<typename Value, std::size_t Index>
+class store_getter {};
 
-template<typename... ArgsT, std::size_t IndexV>
-class StoreGetter<void(ArgsT...), IndexV> {
+template<typename... Args, std::size_t Index>
+class store_getter<void(Args...), Index> {
 private:
-    typedef std::integral_constant<std::size_t, IndexV> IndexT;
+    typedef std::integral_constant<std::size_t, Index> index_constant;
 
 public:
-    auto operator()(Store<void(ArgsT...)> && store) -> decltype(std::move(store).get(IndexT())) {
-        return std::move(store).get(IndexT());
+    auto operator()(store<void(Args...)> && store) -> decltype(std::move(store).get(index_constant())) {
+        return std::move(store).get(index_constant());
     }
 };
 
-template<typename... GettersT>
-struct StoreGetters {};
+template<typename... Getters>
+struct store_getters {};
 
 namespace internal {
 
-template<typename ValueT, std::size_t SizeV, typename... GettersT>
-struct GenStoreGetters : GenStoreGetters<ValueT, SizeV - 1, StoreGetter<ValueT, SizeV - 1>, GettersT...> {};
+template<typename Value, std::size_t Size, typename... Getters>
+struct gen_store_getters : gen_store_getters<Value, Size - 1, store_getter<Value, Size - 1>, Getters...> {};
 
-template<typename ValueT, typename... GettersT>
-struct GenStoreGetters<ValueT, 0, GettersT...> {
-    typedef StoreGetters<GettersT...> Type;
+template<typename Value, typename... Getters>
+struct gen_store_getters<Value, 0, Getters...> {
+    typedef store_getters<Getters...> type;
 };
 
-template<typename ValueT>
-struct GetStoreGettersImpl {};
+template<typename Value>
+struct get_store_getters {};
 
-template<typename... ArgsT>
-struct GetStoreGettersImpl<void(ArgsT...)> {
-    typedef typename internal::GenStoreGetters<void(ArgsT...), sizeof...(ArgsT)>::Type Type;
+template<typename... Args>
+struct get_store_getters<void(Args...)> {
+    typedef typename internal::gen_store_getters<void(Args...), sizeof...(Args)>::type type;
 };
 
-template<std::size_t IndexV, typename... ArgsT>
-class StoreImpl {};
+template<std::size_t Index, typename... Args>
+class store_segment {};
 
-template<typename std::size_t IndexV, typename ArgT>
-class StoreImpl<IndexV, ArgT> {
+template<typename std::size_t Index, typename Arg>
+class store_segment<Index, Arg> {
 public:
-    explicit StoreImpl(ArgT const& arg) : arg(arg) {}
-    explicit StoreImpl(ArgT && arg) : arg(std::move(arg)) {}
+    explicit store_segment(Arg const& arg) : arg(arg) {}
+    explicit store_segment(Arg && arg) : arg(std::move(arg)) {}
 
-    ArgT && get(std::integral_constant<std::size_t, IndexV>) && {
+    Arg && get(std::integral_constant<std::size_t, Index>) && {
         return std::move(this->arg);
     }
 
 private:
-    ArgT arg;
+    Arg arg;
 };
 
-template<typename std::size_t IndexV, typename ArgT>
-class StoreImpl<IndexV, ArgT &> {
+template<typename std::size_t Index, typename Arg>
+class store_segment<Index, Arg &> {
 public:
-    template<typename... CtorArgsT>
-    explicit StoreImpl(ArgT & arg) : arg(std::addressof(arg)) {}
+    template<typename... CtorArgs>
+    explicit store_segment(Arg & arg) : arg(std::addressof(arg)) {}
 
-    ArgT & get(std::integral_constant<std::size_t, IndexV>) && {
+    Arg & get(std::integral_constant<std::size_t, Index>) && {
         return *this->arg;
     }
 
 private:
-    ArgT * arg;
+    Arg * arg;
 };
 
-template<typename std::size_t IndexV, typename ArgT, typename... ArgsT>
-class StoreImpl<IndexV, ArgT, ArgsT...> : public StoreImpl<IndexV, ArgT>, StoreImpl<IndexV + 1, ArgsT...> {
+template<typename std::size_t Index, typename Arg, typename... Args>
+class store_segment<Index, Arg, Args...> : public store_segment<Index, Arg>, store_segment<Index + 1, Args...> {
 public:
-    using StoreImpl<IndexV, ArgT>::get;
-    using StoreImpl<IndexV + 1, ArgsT...>::get;
+    using store_segment<Index, Arg>::get;
+    using store_segment<Index + 1, Args...>::get;
 
-    template<typename CtorArgT, typename... CtorArgsT>
-    explicit StoreImpl(CtorArgT && arg, CtorArgsT &&... args):
-        StoreImpl<IndexV, ArgT>(std::forward<CtorArgT>(arg)),
-        StoreImpl<IndexV + 1, ArgsT...>(std::forward<CtorArgsT>(args)...) {}
+    template<typename CtorArg, typename... CtorArgs>
+    explicit store_segment(CtorArg && arg, CtorArgs &&... args):
+        store_segment<Index, Arg>(std::forward<CtorArg>(arg)),
+        store_segment<Index + 1, Args...>(std::forward<CtorArgs>(args)...) {}
 };
 
 } // namespace internal
 
-template<typename ValueT>
-using GetStoreGetters = typename internal::GetStoreGettersImpl<ValueT>::Type;
+template<typename Value>
+using get_store_getters_t = typename internal::get_store_getters<Value>::type;
 
-template<typename ValueT>
-class Store {};
+template<typename Value>
+class store {};
 
-template<typename... ArgsT>
-class Store<void(ArgsT...)> : private internal::StoreImpl<0, ArgsT...> {
+template<typename... Args>
+class store<void(Args...)> : private internal::store_segment<0, Args...> {
 public:
-    template<typename... CtorArgsT>
-    explicit Store(CtorArgsT &&... args): internal::StoreImpl<0, ArgsT...>(std::forward<CtorArgsT>(args)...) {}
+    template<typename... CtorArgs>
+    explicit store(CtorArgs &&... args): internal::store_segment<0, Args...>(std::forward<CtorArgs>(args)...) {}
 
 private:
-    template<typename FriendValueT, std::size_t FriendIndexV>
-    friend class StoreGetter;
+    template<typename FriendValue, std::size_t FriendIndex>
+    friend class store_getter;
 };
 
 } // namespace ll

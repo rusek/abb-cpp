@@ -7,7 +7,7 @@ namespace abb {
 namespace utils {
 namespace internal {
 
-void fiasco(FiascoInfo const& info) {
+void fiasco(fiasco_info const& info) {
     std::cerr << "File " << info.file << ", line " << info.line << ": " << info.msg << std::endl;
     std::abort();
 }

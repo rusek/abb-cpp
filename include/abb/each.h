@@ -1,7 +1,7 @@
 #ifndef ABB_EACH_H
 #define ABB_EACH_H
 
-#include <abb/ll/eachBrick.h>
+#include <abb/ll/each_brick.h>
 #include <abb/ll/bridge.h>
 #include <abb/utils/range.h>
 
@@ -12,52 +12,52 @@ namespace abb {
 
 namespace internal {
 
-template<typename IteratorT, typename FuncT>
-using EachReturn = decltype(std::declval<FuncT>()(*std::declval<IteratorT>()));
+template<typename Iterator, typename Func>
+using each_return_t = decltype(std::declval<Func>()(*std::declval<Iterator>()));
 
-template<typename RangeT, typename FuncT>
-using EachRangeReturn = decltype(std::declval<FuncT>()(*abb::utils::begin(std::declval<RangeT&>())));
+template<typename Range, typename Func>
+using each_range_return_t = decltype(std::declval<Func>()(*abb::utils::begin(std::declval<Range&>())));
 
 } // namespace internal
 
-template<typename IteratorT, typename FuncT>
-internal::EachReturn<IteratorT, FuncT> each(
-    IteratorT begin,
-    IteratorT end,
-    FuncT && func,
+template<typename Iterator, typename Func>
+internal::each_return_t<Iterator, Func> each(
+    Iterator begin,
+    Iterator end,
+    Func && func,
     std::size_t limit = std::numeric_limits<std::size_t>::max()
 ) {
-    typedef ll::EachBrick<
-        ll::MapGenerator<
-            ll::IteratorGenerator<IteratorT>,
-            ll::Unpacker<typename std::decay<FuncT>::type>
+    typedef ll::each_brick<
+        ll::map_generator<
+            ll::iterator_generator<Iterator>,
+            ll::unpacker<typename std::decay<Func>::type>
         >
-    > EachBrickType;
-    return ll::packBrick<EachBrickType>(
+    > each_brick_type;
+    return ll::pack_brick<each_brick_type>(
         inplace(
             inplace(begin, end),
-            inplace(std::forward<FuncT>(func))
+            inplace(std::forward<Func>(func))
         ),
         limit
     );
 }
 
-template<typename RangeT, typename FuncT>
-internal::EachRangeReturn<RangeT, FuncT> each(
-    RangeT && range,
-    FuncT && func,
+template<typename Range, typename Func>
+internal::each_range_return_t<Range, Func> each(
+    Range && range,
+    Func && func,
     std::size_t limit = std::numeric_limits<std::size_t>::max()
 ) {
-    typedef ll::EachBrick<
-        ll::MapGenerator<
-            ll::RangeGenerator<typename std::decay<RangeT>::type>,
-            ll::Unpacker<typename std::decay<FuncT>::type>
+    typedef ll::each_brick<
+        ll::map_generator<
+            ll::range_generator<typename std::decay<Range>::type>,
+            ll::unpacker<typename std::decay<Func>::type>
         >
-    > EachBrickType;
-    return ll::packBrick<EachBrickType>(
+    > each_brick_type;
+    return ll::pack_brick<each_brick_type>(
         inplace(
-            inplace(std::forward<RangeT>(range)),
-            inplace(std::forward<FuncT>(func))
+            inplace(std::forward<Range>(range)),
+            inplace(std::forward<Func>(func))
         ),
         limit
     );

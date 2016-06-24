@@ -73,25 +73,25 @@ private:
 Timer * Timer::currentTimerPtr = nullptr;
 
 
-typedef abb::Block<void(int)> IntBlock;
-typedef abb::Block<void()> VoidBlock;
-typedef abb::GetReply<VoidBlock> VoidReply;
+typedef abb::block<void(int)> IntBlock;
+typedef abb::block<void()> void_block;
+typedef abb::get_reply_t<void_block> VoidReply;
 
-VoidBlock wait(Duration dur) {
+void_block wait(Duration dur) {
     struct Helpers {
         static void wait(VoidReply & reply, Duration dur1) {
-            if (reply.isAborted()) {
+            if (reply.is_aborted()) {
                 LOG("wait reply aborted, continue anyway");
             }
             Timer::current().schedule(std::bind(&Helpers::finish, std::ref(reply)), dur1);
         }
 
         static void finish(VoidReply & reply) {
-            reply.getIsland().enqueueExternal(std::bind(&VoidReply::setResult, &reply));
+            reply.get_island().enqueue_external(std::bind(&VoidReply::set_result, &reply));
         }
     };
 
-    return abb::impl<VoidBlock>(std::bind(&Helpers::wait, std::placeholders::_1, dur));
+    return abb::impl<void_block>(std::bind(&Helpers::wait, std::placeholders::_1, dur));
 };
 
 IntBlock increment(int val) {
@@ -103,8 +103,8 @@ void display(std::string const & msg) {
     std::cerr << msg << std::endl;
 }
 
-void putFive(abb::Reply<int> & answer) {
-    answer.setResult(5);
+void putFive(abb::reply<int> & answer) {
+    answer.set_result(5);
 }
 
 #define STRING(val) ({ std::stringstream __ss; __ss << val; __ss.str(); })
@@ -117,7 +117,7 @@ public:
         this->i = 666;
     }
 
-    VoidBlock operator()() {
+    void_block operator()() {
         display(STRING("DoSthLoop " << this->i));
         if (this->i > 0) {
             this->i--;
@@ -135,7 +135,7 @@ private:
     int i;
 };
 
-typedef abb::Block<abb::Und, void(std::string)> StringErrorBlock;
+typedef abb::block<abb::und_t, void(std::string)> StringErrorBlock;
 
 StringErrorBlock notFound() {
     return abb::error<StringErrorBlock>("not found");
@@ -146,20 +146,20 @@ void doSth() {
 }
 
 void doSthWithErrors() {
-    typedef abb::Block<void(int), void(std::string)> BlockType;
+    typedef abb::block<void(int), void(std::string)> block_type;
 
     struct Funs {
-        static BlockType inc(int i) {
+        static block_type inc(int i) {
             LOG("inc(" << i << ")");
-            return abb::success<BlockType>(i + 1);
+            return abb::success<block_type>(i + 1);
         }
-        static BlockType suppress(std::string msg) {
+        static block_type suppress(std::string msg) {
             LOG("suppress(" << msg << ")");
-            return abb::success<BlockType>(0);
+            return abb::success<block_type>(0);
         }
     };
 
-    abb::error<BlockType>("bad")
+    abb::error<block_type>("bad")
         .pipe(&Funs::inc, &Funs::suppress)
         .pipe(&Funs::inc, &Funs::suppress)
         .pipe(&Funs::inc)
@@ -167,10 +167,10 @@ void doSthWithErrors() {
 }
 
 void doSthOnErrors() {
-    typedef abb::Block<void(int)> BlockType;
+    typedef abb::block<void(int)> block_type;
 
     struct Funs {
-        static BlockType inc(int i) {
+        static block_type inc(int i) {
             LOG("inc(" << i << ")");
             return abb::success(i + 1);
         }
@@ -194,7 +194,7 @@ void doSthNoncopyableIncrement() {
 }
 
 typedef std::unique_ptr<int> UniqueInt;
-typedef abb::Block<void(UniqueInt)> UniqueIntBlock;
+typedef abb::block<void(UniqueInt)> UniqueIntBlock;
 
 void doSthWithUniqueInt() {
     struct Funs {
@@ -206,7 +206,7 @@ void doSthWithUniqueInt() {
     abb::success(std::unique_ptr<int>(new int(5))).pipe(&Funs::inc);
 }
 
-VoidBlock doSthWait() {
+void_block doSthWait() {
     return wait(std::chrono::milliseconds(200)).pipe([]() {
         LOG("hello");
     });
@@ -215,11 +215,11 @@ VoidBlock doSthWait() {
 int main() {
     Timer timer;
 
-    abb::Island island;
-    island.enqueueExternal(abb::make<Countdown>(10));
-//    island.enqueueExternal(&doSth);
-//    island.enqueueExternal(&doSthWithErrors);
-//    island.enqueueExternal(&doSthOnErrors);
+    abb::island island;
+    island.enqueue_external(abb::make<Countdown>(10));
+//    island.enqueue_external(&doSth);
+//    island.enqueue_external(&doSthWithErrors);
+//    island.enqueue_external(&doSthOnErrors);
     island.run();
 
     return 0;

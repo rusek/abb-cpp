@@ -4,12 +4,12 @@
 namespace abb {
 namespace utils {
 
-class Noncopyable {
+class noncopyable {
 public:
-    Noncopyable() {}
+    noncopyable() {}
 
-    Noncopyable(Noncopyable const&) = delete;
-    Noncopyable& operator=(Noncopyable const&) = delete;
+    noncopyable(noncopyable const&) = delete;
+    noncopyable& operator=(noncopyable const&) = delete;
 };
 
 } // namespace utils

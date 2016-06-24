@@ -3,7 +3,7 @@
 #include <atomic>
 #include <vector>
 
-abb::VoidBlock testFirstSuccessReturned() {
+abb::void_block testFirstSuccessReturned() {
     EXPECT_HITS(1);
     return abb::any(abb::success(1), abb::success(2)).pipe([](int value) {
         HIT();
@@ -40,27 +40,27 @@ std::atomic_size_t Tracked::numInstances;
 
 void testAnyDisposal() {
     struct Dummy : Tracked {
-        abb::VoidBlock operator()() {
+        abb::void_block operator()() {
             return abb::success();
         }
     };
 
     {
-        abb::VoidBlock block = abb::any(abb::make<Dummy>(), abb::make<Dummy>());
+        abb::void_block block = abb::any(abb::make<Dummy>(), abb::make<Dummy>());
         REQUIRE_EQUAL(Tracked::getNumInstances(), 2);
     }
     REQUIRE_EQUAL(Tracked::getNumInstances(), 0);
 }
 
-abb::VoidBlock testAnyOf() {
+abb::void_block testAnyOf() {
     EXPECT_HITS(1);
 
-    std::vector<abb::Block<int>> blocks;
+    std::vector<abb::block<int>> blocks;
     blocks.push_back(abb::success(1));
     blocks.push_back(abb::success(2));
     blocks.push_back(abb::success(3));
 
-    return abb::anyOf(
+    return abb::any_of(
         std::make_move_iterator(blocks.begin()),
         std::make_move_iterator(blocks.end())
     ).pipe([](int value) {
@@ -69,23 +69,23 @@ abb::VoidBlock testAnyOf() {
     });
 }
 
-abb::VoidBlock testAnyOfRange() {
+abb::void_block testAnyOfRange() {
     EXPECT_HITS(1);
 
-    std::vector<abb::Block<int>> blocks;
+    std::vector<abb::block<int>> blocks;
     blocks.push_back(abb::success(1));
     blocks.push_back(abb::success(2));
     blocks.push_back(abb::success(3));
 
-    return abb::anyOf(std::move(blocks)).pipe([](int value) {
+    return abb::any_of(std::move(blocks)).pipe([](int value) {
         REQUIRE_EQUAL(value, 1);
         HIT();
     });
 }
 
-abb::VoidBlock testAnyOfRangeWithRef() {
+abb::void_block testAnyOfRangeWithRef() {
     struct EmbarrassinglyMuvableBlocks {
-        typedef std::move_iterator<std::vector<abb::Block<int>>::iterator> Iterator;
+        typedef std::move_iterator<std::vector<abb::block<int>>::iterator> Iterator;
 
         Iterator begin() {
             return std::make_move_iterator(raw.begin());
@@ -95,7 +95,7 @@ abb::VoidBlock testAnyOfRangeWithRef() {
             return std::make_move_iterator(raw.end());
         }
 
-        std::vector<abb::Block<int>> raw;
+        std::vector<abb::block<int>> raw;
     };
 
     EXPECT_HITS(1);
@@ -105,7 +105,7 @@ abb::VoidBlock testAnyOfRangeWithRef() {
     blocks.raw.push_back(abb::success(2));
     blocks.raw.push_back(abb::success(3));
 
-    return abb::anyOf(blocks).pipe([](int value) {
+    return abb::any_of(blocks).pipe([](int value) {
         REQUIRE_EQUAL(value, 1);
         HIT();
     });
@@ -116,62 +116,62 @@ namespace adlns {
 struct IntBlocks123 {
     IntBlocks123(): blocks({abb::success(1), abb::success(2), abb::success(3)}) {}
 
-    abb::Block<int> blocks[3];
+    abb::block<int> blocks[3];
 };
 
-abb::Block<int> * begin(IntBlocks123 & blocks) {
+abb::block<int> * begin(IntBlocks123 & blocks) {
     return blocks.blocks;
 }
 
-abb::Block<int> * end(IntBlocks123 & blocks) {
+abb::block<int> * end(IntBlocks123 & blocks) {
     return blocks.blocks + 3;
 }
 
 struct MovableIntBlocks123 : IntBlocks123 {};
 
-std::move_iterator<abb::Block<int> *> begin(MovableIntBlocks123 & blocks) {
+std::move_iterator<abb::block<int> *> begin(MovableIntBlocks123 & blocks) {
     return std::make_move_iterator(blocks.blocks);
 }
 
-std::move_iterator<abb::Block<int> *> end(MovableIntBlocks123 & blocks) {
+std::move_iterator<abb::block<int> *> end(MovableIntBlocks123 & blocks) {
     return std::make_move_iterator(blocks.blocks + 3);
 }
 
 } // namespace adlns
 
-abb::VoidBlock testAnyOfRangeADL() {
+abb::void_block testAnyOfRangeADL() {
     EXPECT_HITS(1);
 
     adlns::IntBlocks123 blocks;
 
-    return abb::anyOf(std::move(blocks)).pipe([](int value) {
+    return abb::any_of(std::move(blocks)).pipe([](int value) {
         REQUIRE_EQUAL(value, 1);
         HIT();
     });
 }
 
-abb::VoidBlock testAnyOfRangeWithRefADL() {
+abb::void_block testAnyOfRangeWithRefADL() {
     EXPECT_HITS(1);
 
     adlns::MovableIntBlocks123 blocks;
 
-    return abb::anyOf(blocks).pipe([](int value) {
+    return abb::any_of(blocks).pipe([](int value) {
         REQUIRE_EQUAL(value, 1);
         HIT();
     });
 }
 
-abb::VoidBlock testWaitForCompletionOfAll() {
+abb::void_block testWaitForCompletionOfAll() {
     struct Funcs {
-        static void setResult(abb::Reply<void> & reply) {
+        static void set_result(abb::reply<void> & reply) {
             HIT(1);
-            reply.setResult();
+            reply.set_result();
         }
 
-        static void impl(abb::Reply<void> & reply) {
+        static void impl(abb::reply<void> & reply) {
             HIT(0);
-            REQUIRE_EQUAL(reply.isAborted(), true);
-            reply.getIsland().enqueue(std::bind(&Funcs::setResult, std::ref(reply)));
+            REQUIRE_EQUAL(reply.is_aborted(), true);
+            reply.get_island().enqueue(std::bind(&Funcs::set_result, std::ref(reply)));
         }
     };
 
@@ -179,13 +179,13 @@ abb::VoidBlock testWaitForCompletionOfAll() {
 
     return abb::any(
         abb::success(),
-        abb::impl<abb::VoidBlock>(&Funcs::impl)
+        abb::impl<abb::void_block>(&Funcs::impl)
     ).pipe([]() {
         HIT(2);
     });
 }
 
-abb::VoidBlock testWithOneBlock() {
+abb::void_block testWithOneBlock() {
     EXPECT_HITS(1);
     return abb::any(abb::success(1)).pipe([](int value) {
         REQUIRE_EQUAL(value, 1);

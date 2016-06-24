@@ -1,21 +1,21 @@
 #include "helpers/base.h"
 
-abb::VoidBlock testVoidSuccess() {
+abb::void_block testVoidSuccess() {
     EXPECT_HITS(3);
     HIT(0);
-    abb::VoidBlock block = abb::impl<abb::VoidBlock>([](abb::Reply<void> & reply) {
+    abb::void_block block = abb::impl<abb::void_block>([](abb::reply<void> & reply) {
         HIT(2);
-        reply.setResult();
+        reply.set_result();
     });
     HIT(1);
     return std::move(block);
 }
 
-abb::VoidBlock testIntSuccess() {
+abb::void_block testIntSuccess() {
     EXPECT_HITS(3);
-    return abb::impl<abb::Block<int>>([](abb::Reply<int> & reply) {
+    return abb::impl<abb::block<int>>([](abb::reply<int> & reply) {
         HIT(0);
-        reply.setResult(5);
+        reply.set_result(5);
         HIT(1);
     }).pipe([](int value) {
         HIT(2);
@@ -23,32 +23,32 @@ abb::VoidBlock testIntSuccess() {
     });
 }
 
-abb::VoidBlock testRefSuccess() {
+abb::void_block testRefSuccess() {
     static int var = 0;
     EXPECT_HITS(1);
-    return abb::impl<abb::Block<int&>>([](abb::Reply<int&> & reply) {
-        reply.setResult(var);
+    return abb::impl<abb::block<int&>>([](abb::reply<int&> & reply) {
+        reply.set_result(var);
     }).pipe([](int & value) {
         REQUIRE_EQUAL(&value, &var);
         HIT();
     });
 }
 
-abb::VoidBlock testVoidError() {
-    typedef abb::Block<abb::Und, void> BlockType;
+abb::void_block testVoidError() {
+    typedef abb::block<abb::und_t, void> block_type;
 
-    return abb::impl<BlockType>([](abb::GetReply<BlockType> & reply) {
-        reply.setReason();
-    }).pipe(abb::und, IgnoreReason<BlockType>());
+    return abb::impl<block_type>([](abb::get_reply_t<block_type> & reply) {
+        reply.set_reason();
+    }).pipe(abb::und, IgnoreReason<block_type>());
 }
 
 
-abb::VoidBlock testIntError() {
-    typedef abb::Block<abb::Und, int> BlockType;
+abb::void_block testIntError() {
+    typedef abb::block<abb::und_t, int> block_type;
     EXPECT_HITS(3);
-    return abb::impl<BlockType>([](abb::GetReply<BlockType> & reply) {
+    return abb::impl<block_type>([](abb::get_reply_t<block_type> & reply) {
         HIT(0);
-        reply.setReason(5);
+        reply.set_reason(5);
         HIT(1);
     }).pipe(abb::pass, [](int value) {
         HIT(2);
@@ -56,11 +56,11 @@ abb::VoidBlock testIntError() {
     });
 }
 
-abb::VoidBlock testRefError() {
+abb::void_block testRefError() {
     static int var = 0;
     EXPECT_HITS(1);
-    return abb::impl<abb::Block<abb::Und, int&>>([](abb::Reply<abb::Und, int&> & reply) {
-        reply.setReason(var);
+    return abb::impl<abb::block<abb::und_t, int&>>([](abb::reply<abb::und_t, int&> & reply) {
+        reply.set_reason(var);
     }).pipe(abb::und, [](int & value) {
         REQUIRE_EQUAL(&value, &var);
         HIT();
@@ -68,15 +68,15 @@ abb::VoidBlock testRefError() {
 }
 
 template<bool SuccessV>
-abb::VoidBlock testMixed() {
-    typedef abb::Block<int, bool> BlockType;
+abb::void_block testMixed() {
+    typedef abb::block<int, bool> block_type;
     EXPECT_HITS(2);
-    return abb::impl<BlockType>([](abb::GetReply<BlockType> & reply) {
+    return abb::impl<block_type>([](abb::get_reply_t<block_type> & reply) {
         HIT(0);
         if (SuccessV) {
-            reply.setResult(10);
+            reply.set_result(10);
         } else {
-            reply.setReason(false);
+            reply.set_reason(false);
         }
     }).pipe([](int value) {
         HIT(1);

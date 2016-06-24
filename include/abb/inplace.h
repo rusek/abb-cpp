@@ -5,47 +5,47 @@
 
 namespace abb {
 
-template<typename... ItemsT>
-class Inplace : private std::tuple<typename ItemsT::Type...> {
+template<typename... Items>
+class inplace_tuple : private std::tuple<typename Items::type...> {
 public:
-    using std::tuple<typename ItemsT::Type...>::tuple;
+    using std::tuple<typename Items::type...>::tuple;
 
-    template<typename ArgT, std::size_t IndexV>
-    friend struct InplaceItem;
+    template<typename Arg, std::size_t Index>
+    friend struct inplace_item;
 };
 
-template<typename ArgT, std::size_t IndexV>
-struct InplaceItem {
-    typedef ArgT Type;
-    static std::size_t const index = IndexV;
+template<typename Arg, std::size_t Index>
+struct inplace_item {
+    typedef Arg type;
+    static std::size_t const index = Index;
 
-    template<typename... ItemsT>
-    static ArgT get(Inplace<ItemsT...> const& inplace) {
+    template<typename... Items>
+    static Arg get(inplace_tuple<Items...> const& inplace) {
         // we use tuple under the hood, and to preserve element type unchanged, we need
         // to pass tuple as rvalue to std::get
-        return std::get<IndexV>(std::move(const_cast<Inplace<ItemsT...> &>(inplace)));
+        return std::get<Index>(std::move(const_cast<inplace_tuple<Items...> &>(inplace)));
     }
 };
 
 namespace internal {
 
-template<typename AccT, std::size_t IndexV, typename... ArgsT>
-struct InplaceReturnImpl {
-    typedef AccT Type;
+template<typename Acc, std::size_t Index, typename... Args>
+struct inplace_return {
+    typedef Acc type;
 };
 
-template<typename... ItemsT, std::size_t IndexV, typename ArgT, typename... ArgsT>
-struct InplaceReturnImpl<Inplace<ItemsT...>, IndexV, ArgT, ArgsT...> :
-    InplaceReturnImpl<Inplace<ItemsT..., InplaceItem<ArgT, IndexV>>, IndexV + 1, ArgsT...> {};
+template<typename... Items, std::size_t Index, typename Arg, typename... Args>
+struct inplace_return<inplace_tuple<Items...>, Index, Arg, Args...> :
+    inplace_return<inplace_tuple<Items..., inplace_item<Arg, Index>>, Index + 1, Args...> {};
 
-template<typename... ArgsT>
-using InplaceReturn = typename InplaceReturnImpl<Inplace<>, 0, ArgsT...>::Type;
+template<typename... Args>
+using inplace_return_t = typename inplace_return<inplace_tuple<>, 0, Args...>::type;
 
 } // namespace internal
 
-template<typename... ArgsT>
-internal::InplaceReturn<ArgsT &&...> inplace(ArgsT &&... args) {
-    return internal::InplaceReturn<ArgsT &&...>(std::forward<ArgsT>(args)...);
+template<typename... Args>
+internal::inplace_return_t<Args &&...> inplace(Args &&... args) {
+    return internal::inplace_return_t<Args &&...>(std::forward<Args>(args)...);
 }
 
 } // namespace abb

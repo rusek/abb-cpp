@@ -13,56 +13,56 @@ namespace ll {
 
 namespace internal {
 
-struct BrickVtable;
+struct brick_vtable;
 
-class RawBrick : private utils::Noncopyable {
+class raw_brick : private utils::noncopyable {
 public:
-    internal::BrickVtable const* vtable;
+    internal::brick_vtable const* vtable;
 };
 
-template<typename FriendBrickT>
-class BrickFuncs;
+template<typename FriendBrick>
+class brick_funcs;
 
 } // namespace internal
 
-class Successor {
+class successor {
 public:
-    virtual ~Successor() {}
-    virtual void onUpdate() = 0;
-    virtual Island & getIsland() const = 0;
-    virtual bool isAborted() const = 0;
+    virtual ~successor() {}
+    virtual void on_update() = 0;
+    virtual island & get_island() const = 0;
+    virtual bool is_aborted() const = 0;
 };
 
 enum {
-    PENDING = 0,
-    SUCCESS = 1,
-    ERROR = 2,
-    ABORT = 4,
-    NEXT = 8
+    pending_status = 0,
+    success_status = 1,
+    error_status = 2,
+    abort_status = 4,
+    next_status = 8
 };
 
-typedef int Status;
+typedef int status;
 
-template<typename ResultT, typename ReasonT>
-class BrickPtr;
+template<typename Result, typename Reason>
+class brick_ptr;
 
-template<typename ResultT, typename ReasonT>
-struct Brick : private internal::RawBrick {
-    typedef ResultT ResultType;
-    typedef ReasonT ReasonType;
+template<typename Result, typename Reason>
+struct brick : private internal::raw_brick {
+    typedef Result result;
+    typedef Reason reason;
 
-    template<typename FriendBrickT>
-    friend class internal::BrickFuncs;
+    template<typename FriendBrick>
+    friend class internal::brick_funcs;
 
-    BrickPtr<ResultT, ReasonT> getNext() {
+    brick_ptr<Result, Reason> get_next() {
         ABB_FIASCO("Erased method called");
     }
 
-    Store<ResultT> & getResult() {
+    store<Result> & get_result() {
         ABB_FIASCO("Erased method called");
     }
 
-    Store<ReasonT> & getReason() {
+    store<Reason> & get_reason() {
         ABB_FIASCO("Erased method called");
     }
 };

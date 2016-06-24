@@ -7,24 +7,24 @@
 namespace abb {
 namespace utils {
 
-template<typename ValueT>
-class Bank {
+template<typename Value>
+class bank {
 public:
-    template<typename... ArgsT>
-    void init(ArgsT &&... args) {
-        new (&this->storage) ValueT(std::forward<ArgsT>(args)...);
+    template<typename... Args>
+    void init(Args &&... args) {
+        new (&this->storage) Value(std::forward<Args>(args)...);
     }
 
-    ValueT & operator*() {
-        return *reinterpret_cast<ValueT*>(&this->storage);
+    Value & operator*() {
+        return *reinterpret_cast<Value*>(&this->storage);
     }
 
     void destroy() {
-        reinterpret_cast<ValueT*>(&this->storage)->~ValueT();
+        reinterpret_cast<Value*>(&this->storage)->~Value();
     }
 
 private:
-    typename std::aligned_storage<sizeof(ValueT), alignof(ValueT)>::type storage;
+    typename std::aligned_storage<sizeof(Value), alignof(Value)>::type storage;
 };
 
 } // namespace utils

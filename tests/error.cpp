@@ -3,7 +3,7 @@
 #include <string>
 
 
-abb::VoidBlock testVoid() {
+abb::void_block testVoid() {
     EXPECT_HITS(1);
 
     return abb::error().pipe(abb::und, []() {
@@ -11,7 +11,7 @@ abb::VoidBlock testVoid() {
     });
 }
 
-abb::VoidBlock testInt() {
+abb::void_block testInt() {
     EXPECT_HITS(1);
 
     return abb::error(5).pipe(abb::und, [](int value) {
@@ -20,7 +20,7 @@ abb::VoidBlock testInt() {
     });
 }
 
-abb::VoidBlock testMovable() {
+abb::void_block testMovable() {
     EXPECT_HITS(1);
 
     return abb::error(std::unique_ptr<int>(new int(5))).pipe(abb::und, [](std::unique_ptr<int> arg) {
@@ -31,7 +31,7 @@ abb::VoidBlock testMovable() {
 
 static int refTestInt;
 
-abb::VoidBlock testRef() {
+abb::void_block testRef() {
     EXPECT_HITS(1);
 
     return abb::error(std::ref(refTestInt)).pipe(abb::und, [](int & arg) {
@@ -40,7 +40,7 @@ abb::VoidBlock testRef() {
     });
 }
 
-abb::VoidBlock testMultiArg() {
+abb::void_block testMultiArg() {
     EXPECT_HITS(1);
 
     return abb::error(false, 10, std::string("abc")).pipe(abb::und, [](bool arg1, int arg2, std::string const & arg3) {
