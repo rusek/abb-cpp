@@ -240,6 +240,9 @@ private:
     friend class internal::brick_funcs;
 
     template<typename FriendResult, typename FriendReason>
+    friend brick_ptr<und_t, und_t> abort_cast(brick_ptr<FriendResult, FriendReason> && brick);
+
+    template<typename FriendResult, typename FriendReason>
     friend brick_ptr<FriendResult, und_t> success_cast(brick_ptr<FriendResult, FriendReason> && brick);
 
     template<typename FriendResult, typename FriendReason>
@@ -264,6 +267,14 @@ status brick_ptr<Result, Reason>::try_start(successor & succ) {
     }
 }
 
+
+template<typename Result, typename Reason>
+inline brick_ptr<und_t, und_t> abort_cast(brick_ptr<Result, Reason> && brick) {
+    ABB_ASSERT(brick.get_status() & abort_status, "Expected abort");
+    internal::raw_brick * ptr = brick.ptr;
+    brick.ptr = nullptr;
+    return brick_ptr<und_t, und_t>(ptr);
+}
 
 template<typename Result, typename Reason>
 inline brick_ptr<Result, und_t> success_cast(brick_ptr<Result, Reason> && brick) {

@@ -112,7 +112,10 @@ public:
         error_cont(std::forward<ErrorArg>(error_arg)) {}
 
     out_brick_ptr_type operator()(in_brick_ptr_type in_brick) && {
-        if (in_brick.get_status() & success_status) {
+        status in_status = in_brick.get_status();
+        if (in_status & abort_status) {
+            return abort_cast(std::move(in_brick));
+        } else if (in_status & success_status) {
             return std::move(this->success_cont)(success_cast(std::move(in_brick)));
         } else {
             return std::move(this->error_cont)(error_cast(std::move(in_brick)));
@@ -125,23 +128,55 @@ private:
 };
 
 template<typename Result, typename SuccessCont, typename ErrorCont>
-class brick_cont<Result, und_t, SuccessCont, ErrorCont> : public success_brick_cont<Result, SuccessCont> {
+class brick_cont<Result, und_t, SuccessCont, ErrorCont> {
 public:
+    typedef success_brick_cont<Result, SuccessCont> success_brick_cont_type;
+    typedef brick_ptr<Result, und_t> in_brick_ptr_type;
+    typedef typename success_brick_cont_type::out_brick_ptr_type out_brick_ptr_type;
+
     static_assert(is_special<ErrorCont>::value, "Unexpected error continuation");
 
     template<typename SuccessArg, typename ErrorArg>
     brick_cont(SuccessArg && success_arg, ErrorArg &&):
-        success_brick_cont<Result, SuccessCont>(std::forward<SuccessArg>(success_arg)) {}
+        success_cont(std::forward<SuccessArg>(success_arg)) {}
+
+    out_brick_ptr_type operator()(in_brick_ptr_type in_brick) && {
+        status in_status = in_brick.get_status();
+        if (in_status & abort_status) {
+            return abort_cast(std::move(in_brick));
+        } else {
+            return std::move(this->success_cont)(std::move(in_brick));
+        }
+    }
+
+private:
+    success_brick_cont_type success_cont;
 };
 
 template<typename Reason, typename SuccessCont, typename ErrorCont>
-class brick_cont<und_t, Reason, SuccessCont, ErrorCont> : public error_brick_cont<Reason, ErrorCont> {
+class brick_cont<und_t, Reason, SuccessCont, ErrorCont> {
 public:
-    static_assert(is_special<SuccessCont>::value, "Unexpected error continuation");
+    typedef error_brick_cont<Reason, ErrorCont> error_brick_cont_type;
+    typedef brick_ptr<und_t, Reason> in_brick_ptr_type;
+    typedef typename error_brick_cont_type::out_brick_ptr_type out_brick_ptr_type;
+
+    static_assert(is_special<SuccessCont>::value, "Unexpected success continuation");
 
     template<typename SuccessArg, typename ErrorArg>
     brick_cont(SuccessArg &&, ErrorArg && error_arg):
-        error_brick_cont<Reason, ErrorCont>(std::forward<ErrorArg>(error_arg)) {}
+        error_cont(std::forward<ErrorArg>(error_arg)) {}
+
+    out_brick_ptr_type operator()(in_brick_ptr_type in_brick) && {
+        status in_status = in_brick.get_status();
+        if (in_status & abort_status) {
+            return abort_cast(std::move(in_brick));
+        } else {
+            return std::move(this->error_cont)(std::move(in_brick));
+        }
+    }
+
+private:
+    error_brick_cont_type error_cont;
 };
 
 } // namespace ll

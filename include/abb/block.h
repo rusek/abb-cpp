@@ -88,12 +88,7 @@ private:
     struct pipe_traits {
         typedef typename internal::prepare_cont<Result, SuccessCont>::type success_cont;
         typedef typename internal::prepare_cont<Reason, ErrorCont>::type error_cont;
-        struct abort_cont {
-            ll::brick_ptr<und_t, und_t> operator()() {
-                return ll::make_brick<ll::abort_brick>();
-            }
-        };
-        typedef ll::pipe_brick<Result, Reason, success_cont, error_cont, abort_cont> pipe_brick_type;
+        typedef ll::pipe_brick<Result, Reason, success_cont, error_cont> pipe_brick_type;
         typedef get_block_t<pipe_brick_type> out_block_type;
     };
 
@@ -186,8 +181,7 @@ auto base_block<Result, Reason>::pipe(
     return typename traits::out_block_type(ll::make_brick<typename traits::pipe_brick_type>(
         this->take_brick(),
         std::forward<SuccessCont>(success_cont),
-        std::forward<ErrorCont>(error_cont),
-        typename traits::abort_cont()
+        std::forward<ErrorCont>(error_cont)
     ));
 }
 

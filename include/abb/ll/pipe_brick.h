@@ -24,7 +24,7 @@ struct pipe_traits {
 
 } // namespace internal
 
-template<typename Result, typename Reason, typename SuccessCont, typename ErrorCont, typename AbortCont>
+template<typename Result, typename Reason, typename SuccessCont, typename ErrorCont>
 class pipe_brick :
     public internal::pipe_traits<Result, Reason, SuccessCont, ErrorCont>::base_type,
     private successor
@@ -40,12 +40,10 @@ public:
     pipe_brick(
         in_brick_ptr_type in_brick,
         SuccessArg && success_arg,
-        ErrorArg && error_arg,
-        AbortCont abort_cont
+        ErrorArg && error_arg
     ):
         in_brick(std::move(in_brick)),
-        success_error_cont(std::forward<SuccessArg>(success_arg), std::forward<ErrorArg>(error_arg)),
-        abort_cont(std::move(abort_cont)),
+        cont(std::forward<SuccessArg>(success_arg), std::forward<ErrorArg>(error_arg)),
         succ(nullptr)
     {
     }
@@ -73,31 +71,26 @@ private:
     virtual bool is_aborted() const;
 
     in_brick_ptr_type in_brick;
-    brick_cont_type success_error_cont;
-    AbortCont abort_cont;
+    brick_cont_type cont;
     out_brick_ptr_type out_brick;
     successor * succ;
 };
 
-template<typename Result, typename Reason, typename SuccessCont, typename ErrorCont, typename AbortCont>
-void pipe_brick<Result, Reason, SuccessCont, ErrorCont, AbortCont>::on_update() {
-    if (status in_status = this->in_brick.try_start(*this)) {
-        if (in_status & abort_status) {
-            this->out_brick = this->abort_cont();
-        } else {
-            this->out_brick = std::move(this->success_error_cont)(std::move(this->in_brick));
-        }
+template<typename Result, typename Reason, typename SuccessCont, typename ErrorCont>
+void pipe_brick<Result, Reason, SuccessCont, ErrorCont>::on_update() {
+    if (this->in_brick.try_start(*this)) {
+        this->out_brick = std::move(this->cont)(std::move(this->in_brick));
         this->succ->on_update();
     }
 }
 
-template<typename Result, typename Reason, typename SuccessCont, typename ErrorCont, typename AbortCont>
-island & pipe_brick<Result, Reason, SuccessCont, ErrorCont, AbortCont>::get_island() const {
+template<typename Result, typename Reason, typename SuccessCont, typename ErrorCont>
+island & pipe_brick<Result, Reason, SuccessCont, ErrorCont>::get_island() const {
     return this->succ->get_island();
 }
 
-template<typename Result, typename Reason, typename SuccessCont, typename ErrorCont, typename AbortCont>
-bool pipe_brick<Result, Reason, SuccessCont, ErrorCont, AbortCont>::is_aborted() const {
+template<typename Result, typename Reason, typename SuccessCont, typename ErrorCont>
+bool pipe_brick<Result, Reason, SuccessCont, ErrorCont>::is_aborted() const {
     return this->succ->is_aborted();
 }
 
