@@ -122,14 +122,8 @@ void each_child<EachBrick>::start(EachBrick * parent) {
 
 template<typename EachBrick>
 void each_child<EachBrick>::on_update() {
-    for (;;) {
-        status cur_status = this->in_brick.get_status();
-        if (cur_status == pending_status) {
-            this->in_brick.start(*this);
-            return;
-        } else if (cur_status & next_status) {
-            this->in_brick = this->in_brick.get_next();
-        } else if (cur_status & success_status) {
+    while (status in_status = this->in_brick.try_start(*this)) {
+        if (in_status & success_status) {
             if (this->parent->generator) {
                 this->in_brick = this->parent->generator();
             } else {

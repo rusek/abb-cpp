@@ -225,6 +225,8 @@ public:
         return *internal::value_funcs<Reason>::from_raw(this->ptr->vtable->get_reason(this->ptr));
     }
 
+    status try_start(successor & succ);
+
 private:
     explicit brick_ptr(internal::raw_brick * ptr):
         ptr(ptr) {}
@@ -246,6 +248,22 @@ private:
     template<typename FriendBrick>
     friend FriendBrick * brick_cast(get_brick_ptr_t<FriendBrick> & brick);
 };
+
+template<typename Result, typename Reason>
+status brick_ptr<Result, Reason>::try_start(successor & succ) {
+    for (;;) {
+        status cur_status = this->get_status();
+        if (cur_status == pending_status) {
+            this->start(succ);
+            return pending_status;
+        } else if (cur_status & next_status) {
+            (*this) = this->get_next();
+        } else {
+            return cur_status;
+        }
+    }
+}
+
 
 template<typename Result, typename Reason>
 inline brick_ptr<Result, und_t> success_cast(brick_ptr<Result, Reason> && brick) {

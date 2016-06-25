@@ -81,22 +81,13 @@ private:
 
 template<typename Result, typename Reason, typename SuccessCont, typename ErrorCont, typename AbortCont>
 void pipe_brick<Result, Reason, SuccessCont, ErrorCont, AbortCont>::on_update() {
-    for (;;) {
-        status cur_status = this->in_brick.get_status();
-        if (cur_status == pending_status) {
-            this->in_brick.start(*this);
-            return;
-        } else if (cur_status & next_status) {
-            this->in_brick = this->in_brick.get_next();
+    if (status in_status = this->in_brick.try_start(*this)) {
+        if (in_status & abort_status) {
+            this->out_brick = this->abort_cont();
         } else {
-            if (this->in_brick.get_status() & abort_status) {
-                this->out_brick = this->abort_cont();
-            } else {
-                this->out_brick = std::move(this->success_error_cont)(std::move(this->in_brick));
-            }
-            this->succ->on_update();
-            return;
+            this->out_brick = std::move(this->success_error_cont)(std::move(this->in_brick));
         }
+        this->succ->on_update();
     }
 }
 

@@ -46,17 +46,8 @@ private:
 
 template<typename Result, typename Reason, typename Func>
 void maker_brick<Result, Reason, Func>::on_update() {
-    for (;;) {
-        status cur_status = this->wrapped_brick.get_status();
-        if (cur_status == pending_status) {
-            this->wrapped_brick.start(*this);
-            return;
-        } else if (cur_status == next_status) {
-            this->wrapped_brick = this->wrapped_brick.get_next();
-        } else {
-            this->succ->on_update();
-            return;
-        }
+    if (this->wrapped_brick.try_start(*this)) {
+        this->succ->on_update();
     }
 }
 
