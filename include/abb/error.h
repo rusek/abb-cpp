@@ -13,7 +13,7 @@ namespace abb {
 template<typename Block, typename... Args>
 internal::error_return_t<Block, Args...> error(Args &&... args) {
     typedef internal::error_return_t<Block, Args...> block_type;
-    typedef ll::error_brick<get_result_t<block_type>, get_reason_t<block_type>> error_brick_type;
+    typedef ll::error_brick<get_reason_t<block_type>> error_brick_type;
 
     return ll::pack_brick<error_brick_type>(std::forward<Args>(args)...);
 }

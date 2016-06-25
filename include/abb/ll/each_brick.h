@@ -176,7 +176,7 @@ public:
     void start(successor & succ) {
         this->succ = &succ;
         if (!this->generator) {
-            this->out_brick = make_brick<success_brick<void(), und_t>>();
+            this->out_brick = make_brick<success_brick<void()>>();
             this->succ->on_update();
             return;
         }

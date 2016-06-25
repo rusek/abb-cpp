@@ -10,12 +10,9 @@
 namespace abb {
 namespace ll {
 
-template<typename Result, typename Reason>
-class success_brick : public brick<Result, Reason> {
+template<typename Result>
+class success_brick : public brick<Result, und_t> {
 public:
-    typedef Result result;
-    typedef Reason reason;
-
     template<typename... Args>
     explicit success_brick(Args &&... args):
         value(std::forward<Args>(args)...) {}
@@ -34,12 +31,8 @@ public:
         return this->value;
     }
 
-    store<Reason> & get_reason() {
-        ABB_FIASCO("get_reason called on success_brick");
-    }
-
 private:
-    store<result> value;
+    store<Result> value;
 };
 
 } // namespace ll

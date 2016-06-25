@@ -10,12 +10,9 @@
 namespace abb {
 namespace ll {
 
-template<typename Result, typename Reason>
-class error_brick : public brick<Result, Reason> {
+template<typename Reason>
+class error_brick : public brick<und_t, Reason> {
 public:
-    typedef Result result;
-    typedef Reason reason;
-
     template<typename... Args>
     explicit error_brick(Args &&... args):
         value(std::forward<Args>(args)...) {}
@@ -30,16 +27,12 @@ public:
         return error_status;
     }
 
-    store<Result> & get_result() {
-        ABB_FIASCO("get_result called on error_brick");
-    }
-
     store<Reason> & get_reason() {
         return this->value;
     }
 
 private:
-    store<reason> value;
+    store<Reason> value;
 };
 
 } // namespace ll
