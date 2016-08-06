@@ -9,9 +9,7 @@ abb::void_block test_without_abort() {
     });
 }
 
-void test_with_external_abort() {
-    abb::island & island = abb::island::current();
-
+void test_with_external_abort(abb::island & island) {
     EXPECT_HITS(1);
 
     std::shared_ptr<abb::handle> handle(new abb::handle(island.enqueue(

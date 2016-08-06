@@ -3,14 +3,11 @@
 
 namespace abb {
 
-island * island::current_ptr = nullptr;
-
 island::island(): external_counter(0) {}
 
 island::~island() {}
 
 void island::enqueue_task(task & to_enqueue) {
-    ABB_ASSERT(island::current_ptr == this, "Not a current island");
     this->tasks.push_back(to_enqueue);
 }
 
@@ -38,9 +35,6 @@ void island::decref_external() {
 }
 
 void island::run() {
-    ABB_ASSERT(island::current_ptr == nullptr, "Current island already set");
-    island::current_ptr = this;
-
     while (true) {
         task * to_run;
         {
@@ -61,14 +55,6 @@ void island::run() {
             this->tasks.pop_front().run();
         }
     }
-
-    ABB_ASSERT(island::current_ptr == this, "Current island changed in the meantime");
-    island::current_ptr = nullptr;
-}
-
-island & island::current() {
-    ABB_ASSERT(island::current_ptr != nullptr, "Current island not set");
-    return *island::current_ptr;
 }
 
 } // namespace abb

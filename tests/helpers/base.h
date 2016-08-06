@@ -62,9 +62,25 @@ private:
     }
 };
 
+template<typename Func, typename Return>
+struct FunctionRunnerWithIsland;
+
 template<typename Func>
-void runFunction(Func func) {
+struct FunctionRunnerWithIsland<Func, void> : Runner {
+    void run(Func func) {
+        this->island.enqueue_external(std::bind(func, std::ref(this->island)));
+        this->Runner::run();
+    }
+};
+
+template<typename Func>
+auto runFunction(Func func) -> decltype(func(), void()) {
     FunctionRunner<Func, typename std::result_of<Func()>::type>().run(func);
+}
+
+template<typename Func>
+auto runFunction(Func func) -> decltype(func(std::declval<abb::island&>()), void()) {
+    FunctionRunnerWithIsland<Func, decltype(func(std::declval<abb::island&>()))>().run(func);
 }
 
 template<typename ClassT>

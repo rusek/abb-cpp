@@ -56,8 +56,6 @@ public:
 
     void run();
 
-    static island & current();
-
 private:
     void enqueue_task(task & to_enqueue);
     void enqueue_task_external(task & to_enqueue);
@@ -68,8 +66,6 @@ private:
     std::condition_variable condition;
     task_queue external_tasks;
     std::size_t external_counter;
-
-    static island * current_ptr;
 
     friend void enqueue(island & target, task & to_enqueue) {
         target.enqueue_task(to_enqueue);

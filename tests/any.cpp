@@ -193,9 +193,7 @@ abb::void_block test_with_one_block() {
     });
 }
 
-void test_with_no_blocks() {
-    abb::island & island = abb::island::current();
-
+void test_with_no_blocks(abb::island & island) {
     std::shared_ptr<abb::handle> handle(new abb::handle(island.enqueue(
         abb::void_block(abb::any()).pipe([]() {
             FAILURE("should never be called");
@@ -205,9 +203,7 @@ void test_with_no_blocks() {
     island.enqueue(std::bind(&abb::handle::abort, handle));
 }
 
-void test_any_of_with_no_blocks() {
-    abb::island & island = abb::island::current();
-
+void test_any_of_with_no_blocks(abb::island & island) {
     std::vector<abb::void_block> blocks;
 
     std::shared_ptr<abb::handle> handle(new abb::handle(island.enqueue(
@@ -232,9 +228,7 @@ void enqueue_already_aborted(abb::island & island, abb::void_block block) {
     island.enqueue(std::bind(&abb::handle::abort, handle));
 }
 
-void test_any_with_no_blocks_already_aborted() {
-    abb::island & island = abb::island::current();
-
+void test_any_with_no_blocks_already_aborted(abb::island & island) {
     enqueue_already_aborted(
         island,
         abb::void_block(abb::any()).pipe([]() {
@@ -243,9 +237,7 @@ void test_any_with_no_blocks_already_aborted() {
     );
 }
 
-void test_any_of_with_no_blocks_already_aborted() {
-    abb::island & island = abb::island::current();
-
+void test_any_of_with_no_blocks_already_aborted(abb::island & island) {
     std::vector<abb::void_block> blocks;
 
     enqueue_already_aborted(
