@@ -3,7 +3,7 @@
 #include <atomic>
 #include <vector>
 
-abb::void_block testFirstSuccessReturned() {
+abb::void_block test_first_success_returned() {
     EXPECT_HITS(1);
     return abb::any(abb::success(1), abb::success(2)).pipe([](int value) {
         HIT();
@@ -38,7 +38,7 @@ private:
 std::atomic_size_t Tracked::numInstances;
 
 
-void testAnyDisposal() {
+void test_any_disposal() {
     struct Dummy : Tracked {
         abb::void_block operator()() {
             return abb::success();
@@ -52,7 +52,7 @@ void testAnyDisposal() {
     REQUIRE_EQUAL(Tracked::getNumInstances(), 0);
 }
 
-abb::void_block testAnyOf() {
+abb::void_block test_any_of() {
     EXPECT_HITS(1);
 
     std::vector<abb::block<int>> blocks;
@@ -69,7 +69,7 @@ abb::void_block testAnyOf() {
     });
 }
 
-abb::void_block testAnyOfRange() {
+abb::void_block test_any_of_range() {
     EXPECT_HITS(1);
 
     std::vector<abb::block<int>> blocks;
@@ -83,7 +83,7 @@ abb::void_block testAnyOfRange() {
     });
 }
 
-abb::void_block testAnyOfRangeWithRef() {
+abb::void_block test_any_of_range_with_ref() {
     struct EmbarrassinglyMuvableBlocks {
         typedef std::move_iterator<std::vector<abb::block<int>>::iterator> Iterator;
 
@@ -139,7 +139,7 @@ std::move_iterator<abb::block<int> *> end(MovableIntBlocks123 & blocks) {
 
 } // namespace adlns
 
-abb::void_block testAnyOfRangeADL() {
+abb::void_block test_any_of_range_adl() {
     EXPECT_HITS(1);
 
     adlns::IntBlocks123 blocks;
@@ -150,7 +150,7 @@ abb::void_block testAnyOfRangeADL() {
     });
 }
 
-abb::void_block testAnyOfRangeWithRefADL() {
+abb::void_block test_any_of_range_with_ref_adl() {
     EXPECT_HITS(1);
 
     adlns::MovableIntBlocks123 blocks;
@@ -161,7 +161,7 @@ abb::void_block testAnyOfRangeWithRefADL() {
     });
 }
 
-abb::void_block testWaitForCompletionOfAll() {
+abb::void_block test_wait_for_completion_of_all() {
     struct Funcs {
         static void set_result(abb::reply<void> & reply) {
             HIT(1);
@@ -185,7 +185,7 @@ abb::void_block testWaitForCompletionOfAll() {
     });
 }
 
-abb::void_block testWithOneBlock() {
+abb::void_block test_with_one_block() {
     EXPECT_HITS(1);
     return abb::any(abb::success(1)).pipe([](int value) {
         REQUIRE_EQUAL(value, 1);
@@ -193,16 +193,84 @@ abb::void_block testWithOneBlock() {
     });
 }
 
+void test_with_no_blocks() {
+    abb::island & island = abb::island::current();
+
+    std::shared_ptr<abb::handle> handle(new abb::handle(island.enqueue(
+        abb::void_block(abb::any()).pipe([]() {
+            FAILURE("should never be called");
+        })
+    )));
+
+    island.enqueue(std::bind(&abb::handle::abort, handle));
+}
+
+void test_any_of_with_no_blocks() {
+    abb::island & island = abb::island::current();
+
+    std::vector<abb::void_block> blocks;
+
+    std::shared_ptr<abb::handle> handle(new abb::handle(island.enqueue(
+        abb::void_block(abb::any_of(
+            std::make_move_iterator(blocks.begin()),
+            std::make_move_iterator(blocks.end())
+        )).pipe([]() {
+            FAILURE("should never be called");
+        })
+    )));
+
+    island.enqueue(std::bind(&abb::handle::abort, handle));
+}
+
+void enqueue_already_aborted(abb::island & island, abb::void_block block) {
+    std::shared_ptr<abb::handle> handle(new abb::handle(island.enqueue(
+        abb::impl<abb::void_block>([](abb::void_reply & reply) {
+            reply.get_island().enqueue(std::bind(&abb::void_reply::set_result, &reply));
+        }).pipe(std::move(block))
+    )));
+
+    island.enqueue(std::bind(&abb::handle::abort, handle));
+}
+
+void test_any_with_no_blocks_already_aborted() {
+    abb::island & island = abb::island::current();
+
+    enqueue_already_aborted(
+        island,
+        abb::void_block(abb::any()).pipe([]() {
+            FAILURE("should never be called");
+        })
+    );
+}
+
+void test_any_of_with_no_blocks_already_aborted() {
+    abb::island & island = abb::island::current();
+
+    std::vector<abb::void_block> blocks;
+
+    enqueue_already_aborted(
+        island,
+        abb::void_block(abb::any_of(
+            std::make_move_iterator(blocks.begin()),
+            std::make_move_iterator(blocks.end())
+        )).pipe([]() {
+            FAILURE("should never be called");
+        })
+    );
+}
 
 int main() {
-    RUN_FUNCTION(testFirstSuccessReturned);
-    RUN_FUNCTION(testAnyDisposal);
-    RUN_FUNCTION(testAnyOf);
-    RUN_FUNCTION(testAnyOfRange);
-    RUN_FUNCTION(testAnyOfRangeWithRef);
-    RUN_FUNCTION(testAnyOfRangeADL);
-    RUN_FUNCTION(testAnyOfRangeWithRefADL);
-    RUN_FUNCTION(testWaitForCompletionOfAll);
-    RUN_FUNCTION(testWithOneBlock);
+    RUN_FUNCTION(test_first_success_returned);
+    RUN_FUNCTION(test_any_disposal);
+    RUN_FUNCTION(test_any_of);
+    RUN_FUNCTION(test_any_of_range);
+    RUN_FUNCTION(test_any_of_range_with_ref);
+    RUN_FUNCTION(test_any_of_range_adl);
+    RUN_FUNCTION(test_any_of_range_with_ref_adl);
+    RUN_FUNCTION(test_wait_for_completion_of_all);
+    RUN_FUNCTION(test_with_one_block);
+    RUN_FUNCTION(test_with_no_blocks);
+    RUN_FUNCTION(test_any_of_with_no_blocks);
+    RUN_FUNCTION(test_any_with_no_blocks_already_aborted);
     return 0;
 }

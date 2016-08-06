@@ -3,7 +3,6 @@
 
 #include <abb/ll/brick.h>
 #include <abb/ll/brick_ptr.h>
-#include <abb/ll/abort_brick.h>
 #include <abb/utils/cord.h>
 #include <abb/utils/firewalk.h>
 
@@ -26,58 +25,23 @@ public:
         parent(nullptr),
         in_brick(std::move(in_brick)) {}
 
-    void start(any_brick_type * parent);
-
-    void abort();
-
+private:
     virtual void on_update();
     virtual island & get_island() const;
     virtual bool is_aborted() const;
 
     any_brick_type * parent;
     brick_ptr_type in_brick;
+
+    friend any_brick_type;
 };
 
 template<typename Result, typename Reason>
-void any_child<Result, Reason>::start(any_brick_type * parent) {
-    this->parent = parent;
-    this->on_update();
-}
-
-template<typename Result, typename Reason>
-void any_child<Result, Reason>::abort() {
-    if (this->parent) {
-        this->in_brick.abort();
-    }
-}
-
-template<typename Result, typename Reason>
 void any_child<Result, Reason>::on_update() {
-    for (;;) {
-        status cur_status = this->in_brick.get_status();
-        if (cur_status == pending_status) {
-            /*
-            any_brick_type * any_brick = brick_cast<any_brick_type>(this->in_brick);
-            if (any_brick) {
-                // FIXME not enough, we should try also any_brick<Result, und_t>, any_brick<und_t, Reason>
-                // and any_brick<und_t, und_t>
-                ABB_FIASCO("not implemented");
-            } else {
-                this->in_brick.start(*this);
-            }
-            */
-            this->in_brick.start(*this);
-            return;
-        } else if (cur_status & next_status) {
-            this->in_brick = this->in_brick.get_next();
-        } else {
-            this->cord_detach();
-            any_brick_type * parent = this->parent;
-            brick_ptr_type in_brick = std::move(this->in_brick);
-            delete this;
-            parent->on_child_finish(std::move(in_brick));
-            return;
-        }
+    any_brick_type * parent = this->parent;
+    parent->update_child(this);
+    if (parent->out_brick && parent->children.empty()) {
+        parent->succ->on_update();
     }
 }
 
@@ -93,6 +57,28 @@ bool any_child<Result, Reason>::is_aborted() const {
 
 } // namespace internal
 
+class hold_brick : public brick<und_t, und_t> {
+public:
+    hold_brick(): cur_status(status::startable) {}
+
+    void start(successor & succ) {
+        this->cur_status = succ.is_aborted() ? status::abort : status::running;
+    }
+
+    void abort() {
+        this->cur_status = status::abort;
+    }
+
+    void adopt(successor &) {} // TODO test
+
+    status get_status() const {
+        return this->cur_status;
+    }
+
+private:
+    status cur_status;
+};
+
 template<typename Result, typename Reason>
 class any_brick : public brick<Result, Reason> {
 private:
@@ -105,6 +91,10 @@ public:
     {
         for (; begin != end; ++begin) {
             this->children.insert(new any_child_type(std::move(*begin)));
+        }
+
+        if (this->children.empty()) {
+            this->out_brick = make_brick<hold_brick>();
         }
     }
 
@@ -120,23 +110,31 @@ public:
     void start(successor & succ) {
         this->succ = &succ;
         for (any_child_type * child : utils::firewalk(this->children)) {
-            child->start(this);
+            child->parent = this;
+            this->update_child(child);
         }
     }
 
+    void adopt(successor & succ) { // TODO add test
+        this->succ = &succ;
+    }
+
     void abort() {
-        if (!this->out_brick && !this->children.empty()) {
+        if (!this->out_brick) { // TODO add test
             for (any_child_type * child : utils::firewalk(this->children)) {
-                child->abort();
+                this->abort_child(child);
             }
-        } else {
-            this->out_brick = make_brick<abort_brick>();
-            this->succ->on_update();
         }
     }
 
     status get_status() const {
-        return this->out_brick ? next_status : pending_status;
+        if (this->out_brick && this->children.empty()) {
+            return status::next;
+        } else if (this->succ) {
+            return status::running;
+        } else {
+            return status::startable;
+        }
     }
 
     brick_ptr_type get_next() {
@@ -144,7 +142,8 @@ public:
     }
 
 private:
-    void on_child_finish(brick_ptr_type out_brick);
+    void update_child(any_child_type * child);
+    void abort_child(any_child_type * child);
 
     utils::cord_list<any_child_type> children;
     brick_ptr_type out_brick;
@@ -154,21 +153,29 @@ private:
 };
 
 template<typename Result, typename Reason>
-void any_brick<Result, Reason>::on_child_finish(brick_ptr_type out_brick) {
-    if (this->out_brick) {
-        out_brick.reset();
-        if (this->children.empty()) {
-            this->succ->on_update();
+void any_brick<Result, Reason>::update_child(any_child_type * child) {
+    if (child->in_brick.try_start(*child) != status::running) {
+        bool had_out_brick = this->out_brick;
+        if (!had_out_brick) {
+            this->out_brick = std::move(child->in_brick);
         }
-    } else {
-        this->out_brick = std::move(out_brick);
-        if (this->children.empty()) {
-            this->succ->on_update();
-        } else {
+
+        child->cord_detach();
+        delete child;
+
+        if (!had_out_brick) {
             for (any_child_type * child : utils::firewalk(this->children)) {
-                child->abort();
+                this->abort_child(child);
             }
         }
+    }
+}
+
+template<typename Result, typename Reason>
+void any_brick<Result, Reason>::abort_child(any_child_type * child) {
+    if (child->parent) {
+        child->in_brick.abort();
+        this->update_child(child);
     }
 }
 

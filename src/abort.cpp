@@ -6,7 +6,7 @@ namespace abb {
 namespace ll {
 
 void abort_point_brick::run() {
-    this->cur_status = this->succ->is_aborted() ? abort_status : success_status;
+    this->cur_status = this->succ->is_aborted() ? status::abort : status::success;
     this->succ->on_update();
 }
 

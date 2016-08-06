@@ -17,14 +17,8 @@ public:
     explicit success_brick(Args &&... args):
         value(std::forward<Args>(args)...) {}
 
-    void abort() {}
-
-    void start(successor &) {
-        ABB_FIASCO("start called on success_brick");
-    }
-
     status get_status() const {
-        return success_status;
+        return status::success;
     }
 
     store<Result> & get_result() {

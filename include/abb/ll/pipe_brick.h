@@ -50,15 +50,26 @@ public:
 
     void abort() {
         this->in_brick.abort();
+        this->update(); // TODO test
     }
 
     void start(successor & succ) {
         this->succ = &succ;
-        this->on_update();
+        this->update();
+    }
+
+    void adopt(successor & succ) {
+        this->succ = &succ;
     }
 
     status get_status() const {
-        return this->out_brick ? next_status : pending_status;
+        if (this->out_brick) {
+            return status::next;
+        } else if (this->succ) {
+            return status::running;
+        } else {
+            return status::startable;
+        }
     }
 
     out_brick_ptr_type get_next() {
@@ -70,6 +81,8 @@ private:
     virtual island & get_island() const;
     virtual bool is_aborted() const;
 
+    void update();
+
     in_brick_ptr_type in_brick;
     brick_cont_type cont;
     out_brick_ptr_type out_brick;
@@ -78,9 +91,17 @@ private:
 
 template<typename Result, typename Reason, typename SuccessCont, typename ErrorCont>
 void pipe_brick<Result, Reason, SuccessCont, ErrorCont>::on_update() {
-    if (this->in_brick.try_start(*this)) {
-        this->out_brick = std::move(this->cont)(std::move(this->in_brick));
+    this->update();
+    if (this->out_brick) {
         this->succ->on_update();
+    }
+}
+
+template<typename Result, typename Reason, typename SuccessCont, typename ErrorCont>
+void pipe_brick<Result, Reason, SuccessCont, ErrorCont>::update() {
+    status in_status = this->in_brick.try_start(*this);
+    if (in_status != status::running) {
+        this->out_brick = std::move(this->cont)(std::move(this->in_brick));
     }
 }
 

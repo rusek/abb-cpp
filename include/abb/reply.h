@@ -47,6 +47,8 @@ public:
 template<typename Result = und_t, typename Reason = und_t>
 using reply = base_reply<normalize_value_t<Result>, normalize_value_t<Reason>>;
 
+typedef reply<void> void_reply;
+
 template<typename Arg>
 using get_reply_t = base_reply<get_result_t<Arg>, get_reason_t<Arg>>;
 

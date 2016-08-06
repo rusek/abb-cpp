@@ -3,8 +3,8 @@
 
 namespace abb {
 
-und_block hold() {
-    return ll::pack_brick<ll::any_brick<und_t, und_t>>();
+und_block any() {
+    return ll::pack_brick<ll::hold_brick>();
 }
 
 } // namespace abb

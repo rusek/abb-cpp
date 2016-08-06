@@ -101,9 +101,9 @@ private:
     typedef get_brick_ptr_t<EachBrick> brick_ptr_type;
 
 public:
-    explicit each_child(brick_ptr_type in_brick): in_brick(std::move(in_brick)) {}
-
-    void start(EachBrick * parent);
+    each_child(brick_ptr_type in_brick, EachBrick * parent):
+        in_brick(std::move(in_brick)),
+        parent(parent) {}
 
 private:
     virtual void on_update();
@@ -112,36 +112,16 @@ private:
 
     brick_ptr_type in_brick;
     EachBrick * parent;
+
+    friend EachBrick;
 };
 
 template<typename EachBrick>
-void each_child<EachBrick>::start(EachBrick * parent) {
-    this->parent = parent;
-    this->on_update();
-}
-
-template<typename EachBrick>
 void each_child<EachBrick>::on_update() {
-    while (status in_status = this->in_brick.try_start(*this)) {
-        if (in_status & success_status) {
-            if (this->parent->generator) {
-                this->in_brick = this->parent->generator();
-            } else {
-                brick_ptr_type in_brick = std::move(this->in_brick);
-                EachBrick * parent = this->parent;
-                this->cord_detach();
-                delete this;
-                parent->on_child_success(std::move(in_brick));
-                return;
-            }
-        } else {
-            brick_ptr_type in_brick = std::move(this->in_brick);
-            EachBrick * parent = this->parent;
-            this->cord_detach();
-            delete this;
-            parent->on_child_error(std::move(in_brick));
-            return;
-        }
+    EachBrick * parent = this->parent;
+    status parent_status = parent->update_child(this);
+    if (parent_status != status::running) {
+        parent->succ->on_update();
     }
 }
 
@@ -177,32 +157,42 @@ public:
         this->succ = &succ;
         if (!this->generator) {
             this->out_brick = make_brick<success_brick<void()>>();
-            this->succ->on_update();
             return;
         }
 
         for (std::size_t limit = this->limit; this->generator && limit; --limit) {
-            this->children.insert(new each_child_type(this->generator()));
+            this->children.insert(new each_child_type(this->generator(), this));
         }
 
         for (each_child_type * child : utils::firewalk(this->children)) {
-            child->start(this);
+            this->update_child(child);
         }
     }
 
+    void adopt(successor & succ) {
+        this->succ = &succ;
+    }
+
     status get_status() const {
-        return this->out_brick ? next_status : pending_status;
+        if (this->out_brick && this->children.empty()) {
+            return status::next;
+        } else if (this->succ) {
+            return status::running;
+        } else {
+            return status::startable;
+        }
     }
 
     brick_ptr_type get_next() {
         return std::move(this->out_brick);
     }
 
-    void abort() {}
+    void abort() {
+        // TODO implement
+    }
 
 private:
-    void on_child_success(brick_ptr_type out_brick);
-    void on_child_error(brick_ptr_type out_brick);
+    status update_child(each_child_type * child);
 
     Generator generator;
     std::size_t limit;
@@ -214,22 +204,34 @@ private:
 };
 
 template<typename Generator>
-void each_brick<Generator>::on_child_success(brick_ptr_type out_brick) {
-    if (this->children.empty()) {
-        if (!this->out_brick) {
-            this->out_brick = std::move(out_brick);
-        }
-        this->succ->on_update();
-    }
-}
+status each_brick<Generator>::update_child(each_child_type * child) {
+    for (;;) {
+        status in_status = child->in_brick.try_start(*child);
+        if (in_status == status::success && this->generator) { // TODO stop if out_brick is set
+            child->in_brick = this->generator();
+        } else {
+            brick_ptr_type in_brick = std::move(child->in_brick);
+            child->cord_detach();
+            delete child;
 
-template<typename Generator>
-void each_brick<Generator>::on_child_error(brick_ptr_type out_brick) {
-    if (!this->out_brick) {
-        this->out_brick = std::move(out_brick);
-    }
-    if (this->children.empty()) {
-        this->succ->on_update();
+            if (in_status == status::success) {
+                if (this->children.empty()) {
+                    if (!this->out_brick) {
+                        this->out_brick = std::move(in_brick);
+                    }
+                    return status::next;
+                }
+            } else {
+                if (!this->out_brick) {
+                    this->out_brick = std::move(in_brick);
+                    // TODO issue abort
+                }
+                if (this->children.empty()) {
+                    return status::next;
+                }
+            }
+            return status::running;
+        }
     }
 }
 

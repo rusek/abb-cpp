@@ -60,7 +60,7 @@ private:
 
 template<typename Result, typename Reason, bool External>
 void brick_runner<Result, Reason, External>::on_update() {
-    if (this->brick.try_start(*this)) {
+    if (this->brick.try_start(*this) != status::running) {
         this->target.decref_external();
         this->flags &= ~runner_ref_work;
         if ((this->flags & runner_ref) == 0) {
@@ -86,6 +86,7 @@ void brick_runner<Result, Reason, External>::run() {
         this->flags |= runner_abort_accepted;
         if (this->flags & runner_ref_work) {
             this->brick.abort();
+            this->on_update();
         } else if (!(this->flags & runner_ref)) {
             delete this;
         }

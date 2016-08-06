@@ -33,15 +33,14 @@ public:
     virtual bool is_aborted() const = 0;
 };
 
-enum {
-    pending_status = 0,
-    success_status = 1,
-    error_status = 2,
-    abort_status = 4,
-    next_status = 8
+enum class status {
+    running,
+    startable,
+    next,
+    success,
+    error,
+    abort
 };
-
-typedef int status;
 
 template<typename Result, typename Reason>
 class brick_ptr;
@@ -53,6 +52,18 @@ struct brick : private internal::raw_brick {
 
     template<typename FriendBrick>
     friend class internal::brick_funcs;
+
+    void start(successor &) {
+        ABB_FIASCO("Erased method called");
+    }
+
+    void adopt(successor &) {
+        ABB_FIASCO("Erased method called");
+    }
+
+    void abort() {
+        ABB_FIASCO("Erased method called");
+    }
 
     brick_ptr<Result, Reason> get_next() {
         ABB_FIASCO("Erased method called");

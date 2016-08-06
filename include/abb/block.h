@@ -11,7 +11,6 @@
 #include <abb/ll/brick_runner.h>
 #include <abb/ll/pipe_brick.h>
 #include <abb/ll/brick_ptr.h>
-#include <abb/ll/abort_brick.h>
 #include <abb/ll/bridge.h>
 
 #include <abb/utils/debug.h>

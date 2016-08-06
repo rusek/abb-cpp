@@ -113,9 +113,9 @@ public:
 
     out_brick_ptr_type operator()(in_brick_ptr_type in_brick) && {
         status in_status = in_brick.get_status();
-        if (in_status & abort_status) {
+        if (in_status == status::abort) {
             return abort_cast(std::move(in_brick));
-        } else if (in_status & success_status) {
+        } else if (in_status == status::success) {
             return std::move(this->success_cont)(success_cast(std::move(in_brick)));
         } else {
             return std::move(this->error_cont)(error_cast(std::move(in_brick)));
@@ -142,7 +142,7 @@ public:
 
     out_brick_ptr_type operator()(in_brick_ptr_type in_brick) && {
         status in_status = in_brick.get_status();
-        if (in_status & abort_status) {
+        if (in_status == status::abort) {
             return abort_cast(std::move(in_brick));
         } else {
             return std::move(this->success_cont)(std::move(in_brick));
@@ -168,7 +168,7 @@ public:
 
     out_brick_ptr_type operator()(in_brick_ptr_type in_brick) && {
         status in_status = in_brick.get_status();
-        if (in_status & abort_status) {
+        if (in_status == status::abort) {
             return abort_cast(std::move(in_brick));
         } else {
             return std::move(this->error_cont)(std::move(in_brick));

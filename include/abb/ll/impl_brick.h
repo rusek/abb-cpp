@@ -62,33 +62,44 @@ public:
     typedef Reason reason;
 
     template<typename Arg>
-    impl_brick(Arg && arg): func(std::forward<Arg>(arg)), cur_status(pending_status), succ(nullptr) {}
+    impl_brick(Arg && arg): func(std::forward<Arg>(arg)), cur_status(status::startable), succ(nullptr) {}
 
     ~impl_brick() {
-        if (this->cur_status & (success_status | error_status)) {
-            this->value.destroy(this->cur_status & success_status);
+        if (this->cur_status == status::success) {
+            this->value.destroy(true);
+        } else if (this->cur_status == status::error) {
+            this->value.destroy(false);
         }
     }
 
-    void abort() {}
+    void abort() {} // TODO implement
 
     void start(successor & succ) {
         ABB_ASSERT(!this->succ, "Already got succ");
         this->succ = &succ;
+        this->cur_status = status::running;
         this->func(*static_cast<reply<Result, Reason>*>(this));
     }
 
+    void adopt(successor & succ) {
+        this->succ = &succ;
+    }
+
     status get_status() const {
-        return this->cur_status;
+        if (this->succ) {
+            return status::running;
+        } else {
+            return this->cur_status;
+        }
     }
 
     store<Result> & get_result() {
-        ABB_ASSERT(this->cur_status & success_status, "Result is not set");
+        ABB_ASSERT(this->cur_status == status::success, "Result is not set");
         return *this->value.result;
     }
 
     store<Reason> & get_reason() {
-        ABB_ASSERT(this->cur_status & error_status, "Reason is not set");
+        ABB_ASSERT(this->cur_status == status::error, "Reason is not set");
         return *this->value.reason;
     }
 
@@ -107,26 +118,28 @@ protected:
 
 template<typename Result, typename Reason, typename Func>
 void impl_brick<Result, Reason, Func>::run() {
-    this->succ->on_update();
+    successor * succ = this->succ;
+    this->succ = nullptr;
+    succ->on_update();
 }
 
 template<typename Result, typename Reason, typename Func>
 island & impl_brick<Result, Reason, Func>::get_island() const {
-    ABB_ASSERT(this->cur_status == pending_status, "Cannot call get_island after setting a value");
+    ABB_ASSERT(this->cur_status == status::running, "Cannot call get_island after setting a value");
     return this->succ->get_island();
 }
 
 template<typename Result, typename Reason, typename Func>
 bool impl_brick<Result, Reason, Func>::is_aborted() const {
-    ABB_ASSERT(this->cur_status == pending_status, "Cannot call get_island after setting a value");
+    ABB_ASSERT(this->cur_status == status::running, "Cannot call get_island after setting a value");
     return this->succ->is_aborted();
 }
 
 template<typename Result, typename Reason, typename Func>
 void impl_brick<Result, Reason, Func>::set_aborted() {
-    ABB_ASSERT(this->cur_status == pending_status, "Already got value");
+    ABB_ASSERT(this->cur_status == status::running, "Already got value");
     ABB_ASSERT(this->succ->is_aborted(), "Abort was not requested");
-    this->cur_status = abort_status;
+    this->cur_status = status::abort;
     this->succ->get_island().enqueue(static_cast<task&>(*this));
 }
 
@@ -143,9 +156,9 @@ public:
 
 protected:
     virtual void set_result(Args... args) {
-        ABB_ASSERT(this->cur_status == pending_status, "Already got value");
+        ABB_ASSERT(this->cur_status == status::running, "Already got value");
         this->value.result.init(std::forward<Args>(args)...);
-        this->cur_status = success_status;
+        this->cur_status = status::success;
         this->succ->get_island().enqueue(static_cast<task&>(*this));
     }
 };
@@ -163,9 +176,9 @@ public:
 
 protected:
     virtual void set_reason(Args... args) {
-        ABB_ASSERT(this->cur_status == pending_status, "Already got value");
+        ABB_ASSERT(this->cur_status == status::running, "Already got value");
         this->value.reason.init(std::forward<Args>(args)...);
-        this->cur_status = error_status;
+        this->cur_status = status::error;
         this->succ->get_island().enqueue(static_cast<task&>(*this));
     }
 };

@@ -256,12 +256,14 @@ template<typename Result, typename Reason>
 status brick_ptr<Result, Reason>::try_start(successor & succ) {
     for (;;) {
         status cur_status = this->get_status();
-        if (cur_status == pending_status) {
+        switch (cur_status) {
+        case status::startable:
             this->start(succ);
-            return pending_status;
-        } else if (cur_status & next_status) {
+            break;
+        case status::next:
             (*this) = this->get_next();
-        } else {
+            break;
+        default:
             return cur_status;
         }
     }
@@ -270,7 +272,7 @@ status brick_ptr<Result, Reason>::try_start(successor & succ) {
 
 template<typename Result, typename Reason>
 inline brick_ptr<und_t, und_t> abort_cast(brick_ptr<Result, Reason> && brick) {
-    ABB_ASSERT(brick.get_status() & abort_status, "Expected abort");
+    ABB_ASSERT(brick.get_status() == status::abort, "Expected abort");
     internal::raw_brick * ptr = brick.ptr;
     brick.ptr = nullptr;
     return brick_ptr<und_t, und_t>(ptr);
@@ -278,7 +280,7 @@ inline brick_ptr<und_t, und_t> abort_cast(brick_ptr<Result, Reason> && brick) {
 
 template<typename Result, typename Reason>
 inline brick_ptr<Result, und_t> success_cast(brick_ptr<Result, Reason> && brick) {
-    ABB_ASSERT(brick.get_status() & success_status, "Expected success");
+    ABB_ASSERT(brick.get_status() == status::success, "Expected success");
     internal::raw_brick * ptr = brick.ptr;
     brick.ptr = nullptr;
     return brick_ptr<Result, und_t>(ptr);
@@ -286,7 +288,7 @@ inline brick_ptr<Result, und_t> success_cast(brick_ptr<Result, Reason> && brick)
 
 template<typename Result, typename Reason>
 inline brick_ptr<und_t, Reason> error_cast(brick_ptr<Result, Reason> && brick) {
-    ABB_ASSERT(brick.get_status() & error_status, "Expected error");
+    ABB_ASSERT(brick.get_status() == status::error, "Expected error");
     internal::raw_brick * ptr = brick.ptr;
     brick.ptr = nullptr;
     return brick_ptr<und_t, Reason>(ptr);

@@ -16,18 +16,32 @@ public:
     void start(successor & succ) {
         this->succ = &succ;
         this->wrapped_brick = std::move(this->func)();
-        this->on_update();
+        if (this->wrapped_brick.try_start(*this) != status::running) {
+            this->succ = nullptr;
+        }
+    }
+
+    void adopt(successor & succ) {
+        this->succ = &succ;
     }
 
     void abort() {
         this->wrapped_brick.abort();
+        if (this->wrapped_brick.try_start(*this) != status::running) { // TODO test
+            this->succ = nullptr;
+        }
     }
 
     status get_status() const {
-        return (
-            this->wrapped_brick &&
-            (this->wrapped_brick.get_status() & (success_status | error_status | abort_status))
-        ) ? next_status : pending_status;
+        if (this->wrapped_brick) {
+            if (!this->succ) {
+                return status::next;
+            } else {
+                return status::running;
+            }
+        } else {
+            return status::startable;
+        }
     }
 
     brick_ptr<Result, Reason> get_next() {
@@ -46,8 +60,10 @@ private:
 
 template<typename Result, typename Reason, typename Func>
 void maker_brick<Result, Reason, Func>::on_update() {
-    if (this->wrapped_brick.try_start(*this)) {
-        this->succ->on_update();
+    if (this->wrapped_brick.try_start(*this) != status::running) {
+        successor & succ = *this->succ;
+        this->succ = nullptr;
+        succ.on_update();
     }
 }
 

@@ -56,6 +56,8 @@ base_block<common_value_t<Results...>, common_value_t<Reasons...>> any(base_bloc
     return ll::pack_brick<any_brick_type>(std::begin(bricks), std::end(bricks));
 }
 
+und_block any();
+
 template<typename Iterator>
 internal::any_of_return_t<Iterator> any_of(Iterator begin, Iterator end) {
     typedef internal::any_of_return_t<Iterator> block_type;
@@ -69,8 +71,6 @@ typename internal::any_of_range_traits<Range &&>::block_type any_of(Range && ran
     typedef internal::any_of_range_traits<Range &&> traits;
     return any_of(traits::do_begin(std::forward<Range>(range)), traits::do_end(std::forward<Range>(range)));
 }
-
-und_block hold();
 
 } // namespace abb
 
