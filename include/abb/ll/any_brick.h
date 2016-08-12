@@ -40,7 +40,7 @@ template<typename Result, typename Reason>
 void any_child<Result, Reason>::on_update() {
     any_brick_type * parent = this->parent;
     parent->update_child(this);
-    if (parent->out_brick && parent->children.empty()) {
+    if (parent->out_brick && parent->children.empty()) { // TODO test various false / true scenarios
         parent->succ->on_update();
     }
 }
@@ -163,7 +163,7 @@ void any_brick<Result, Reason>::update_child(any_child_type * child) {
         child->cord_detach();
         delete child;
 
-        if (!had_out_brick) {
+        if (!had_out_brick && !this->succ->is_aborted()) {
             for (any_child_type * child : utils::firewalk(this->children)) {
                 this->abort_child(child);
             }
@@ -175,7 +175,7 @@ template<typename Result, typename Reason>
 void any_brick<Result, Reason>::abort_child(any_child_type * child) {
     if (child->parent) {
         child->in_brick.abort();
-        this->update_child(child);
+        this->update_child(child); // TODO test this call is necessary
     }
 }
 

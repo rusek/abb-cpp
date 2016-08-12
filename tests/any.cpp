@@ -1,4 +1,5 @@
 #include "helpers/base.h"
+#include "helpers/block_mock.h"
 
 #include <atomic>
 #include <vector>
@@ -251,6 +252,54 @@ void test_any_of_with_no_blocks_already_aborted(abb::island & island) {
     );
 }
 
+void test_any_already_aborted(abb::island & island) {
+    EXPECT_HITS(5);
+    block_mock<void> m1, m2;
+
+    m1.expect_start([=]() {
+        REQUIRE_EQUAL(m1.is_aborted(), true);
+        HIT(0);
+        m1.enqueue([=]() {
+            HIT(2);
+            m1.set_result();
+            m2.enqueue([=]() {
+                HIT(3);
+                m2.set_aborted();
+            });
+        });
+    });
+    m2.expect_start([=]() {
+        REQUIRE_EQUAL(m2.is_aborted(), true);
+        HIT(1);
+    });
+
+    enqueue_already_aborted(
+        island,
+        abb::any(m1.get(), m2.get()).pipe([]() {
+            HIT(4);
+        })
+    );
+}
+
+abb::void_block test_remaining_blocks_aborted() {
+    block_mock<void> m1, m2, m3;
+
+    m1.expect_start();
+    m2.expect_start([=]() {
+        m2.enqueue_set_result();
+        m1.expect_abort([=]() {
+            m1.enqueue([=]() {
+                m1.set_aborted();
+                m3.enqueue_set_aborted();
+            });
+        });
+        m3.expect_abort();
+    });
+    m3.expect_start();
+
+    return abb::any(m1.get(), m2.get(), m3.get());
+}
+
 int main() {
     RUN_FUNCTION(test_first_success_returned);
     RUN_FUNCTION(test_any_disposal);
@@ -264,5 +313,7 @@ int main() {
     RUN_FUNCTION(test_with_no_blocks);
     RUN_FUNCTION(test_any_of_with_no_blocks);
     RUN_FUNCTION(test_any_with_no_blocks_already_aborted);
+    RUN_FUNCTION(test_any_already_aborted);
+    RUN_FUNCTION(test_remaining_blocks_aborted);
     return 0;
 }
