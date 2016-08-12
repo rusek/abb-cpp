@@ -52,8 +52,58 @@ struct value_bank<und_t, Reason> {
     };
 };
 
+template<>
+struct value_bank<und_t, und_t> {
+    struct type {
+        void destroy(bool) {}
+    };
+};
+
 template<typename Result, typename Reason>
 using value_to_bank_t = typename value_bank<Result, Reason>::type;
+
+template<typename Return>
+class abort_notifier : utils::noncopyable {
+public:
+    static_assert(
+        std::is_same<typename std::result_of<Return()>::type, void>::value,
+        "Invalid type of abort notification"
+    );
+
+    abort_notifier(): initialized(false) {}
+
+    ~abort_notifier() {
+        if (this->initialized) {
+            this->val.destroy();
+        }
+    }
+
+    template<typename Func, typename Reply>
+    void setup(Func & func, Reply & reply) {
+        this->val.init(func(reply));
+        this->initialized = true;
+    }
+
+    void abort() {
+        ABB_ASSERT(this->initialized, "not initialized");
+        (*this->val)();
+    }
+
+private:
+    utils::bank<Return> val;
+    bool initialized;
+};
+
+template<>
+class abort_notifier<void> {
+public:
+    template<typename Func, typename Reply>
+    void setup(Func & func, Reply & reply) {
+        func(reply);
+    }
+
+    void abort() {}
+};
 
 template<typename Result, typename Reason, typename Func>
 class impl_brick : public brick<Result, Reason>, protected task, protected reply<Result, Reason> {
@@ -72,13 +122,17 @@ public:
         }
     }
 
-    void abort() {} // TODO implement
+    void abort() {
+        if (this->cur_status == status::running) {
+            this->notifier.abort();
+        }
+    }
 
     void start(successor & succ) {
         ABB_ASSERT(!this->succ, "Already got succ");
         this->succ = &succ;
         this->cur_status = status::running;
-        this->func(*static_cast<reply<Result, Reason>*>(this));
+        this->notifier.setup(this->func, *static_cast<reply<Result, Reason>*>(this));
     }
 
     void adopt(successor & succ) {
@@ -111,7 +165,8 @@ protected:
     virtual void set_aborted();
 
     Func func;
-    internal::value_to_bank_t<result, reason> value;
+    abort_notifier<typename std::result_of<Func(reply<Result, Reason>&)>::type> notifier;
+    value_to_bank_t<result, reason> value;
     status cur_status;
     successor * succ;
 };
