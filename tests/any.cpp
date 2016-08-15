@@ -164,15 +164,16 @@ abb::void_block test_any_of_range_with_ref_adl() {
 
 abb::void_block test_wait_for_completion_of_all() {
     struct Funcs {
-        static void set_result(abb::reply<void> & reply) {
+        static void set_result(std::shared_ptr<abb::reply<void>> reply) {
             HIT(1);
-            reply.set_result();
+            reply->set_result();
         }
 
-        static void impl(abb::reply<void> & reply) {
+        static void impl(abb::reply<void> reply) {
             HIT(0);
-            REQUIRE_EQUAL(reply.is_aborted(), true);
-            reply.get_island().enqueue(std::bind(&Funcs::set_result, std::ref(reply)));
+            std::shared_ptr<abb::reply<void>> shared_reply(new abb::reply<void>(std::move(reply)));
+            REQUIRE_EQUAL(shared_reply->is_aborted(), true);
+            shared_reply->get_island().enqueue(std::bind(&Funcs::set_result, shared_reply));
         }
     };
 
@@ -221,8 +222,9 @@ void test_any_of_with_no_blocks(abb::island & island) {
 
 void enqueue_already_aborted(abb::island & island, abb::void_block block) {
     std::shared_ptr<abb::handle> handle(new abb::handle(island.enqueue(
-        abb::impl<abb::void_block>([](abb::void_reply & reply) {
-            reply.get_island().enqueue(std::bind(&abb::void_reply::set_result, &reply));
+        abb::impl<abb::void_block>([](abb::void_reply reply) {
+            std::shared_ptr<abb::void_reply> shared_reply(new abb::void_reply(std::move(reply)));
+            shared_reply->get_island().enqueue(std::bind(&abb::void_reply::set_result, shared_reply));
         }).pipe(std::move(block))
     )));
 

@@ -79,15 +79,15 @@ typedef abb::get_reply_t<void_block> VoidReply;
 
 void_block wait(Duration dur) {
     struct Helpers {
-        static void wait(VoidReply & reply, Duration dur1) {
+        static void wait(VoidReply reply, Duration dur1) {
             if (reply.is_aborted()) {
                 LOG("wait reply aborted, continue anyway");
             }
-            Timer::current().schedule(std::bind(&Helpers::finish, std::ref(reply)), dur1);
+            Timer::current().schedule(std::bind(&Helpers::finish, std::make_shared<VoidReply>(std::move(reply))), dur1);
         }
 
-        static void finish(VoidReply & reply) {
-            reply.get_island().enqueue_external(std::bind(&VoidReply::set_result, &reply));
+        static void finish(std::shared_ptr<VoidReply> reply) {
+            reply->get_island().enqueue_external(std::bind(&VoidReply::set_result, reply));
         }
     };
 
@@ -103,7 +103,7 @@ void display(std::string const & msg) {
     std::cerr << msg << std::endl;
 }
 
-void putFive(abb::reply<int> & answer) {
+void putFive(abb::reply<int> answer) {
     answer.set_result(5);
 }
 

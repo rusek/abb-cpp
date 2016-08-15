@@ -33,20 +33,7 @@ public:
 
 private:
     struct state {
-        state(): reply(nullptr) {}
-
-        reply_type & get_reply() {
-            REQUIRE(this->reply);
-            return *this->reply;
-        }
-
-        reply_type & take_reply() {
-            reply_type & reply = this->get_reply();
-            this->reply = nullptr;
-            return reply;
-        }
-
-        reply_type * reply;
+        reply_type reply;
         action_type start;
         action_type abort;
     };
@@ -54,8 +41,8 @@ private:
     struct worker {
         explicit worker(std::shared_ptr<state> shared_state): shared_state(shared_state) {}
 
-        std::function<void()> operator()(reply_type & reply) {
-            this->shared_state->reply = &reply;
+        std::function<void()> operator()(reply_type reply) {
+            this->shared_state->reply = std::move(reply);
             fire_action(this->shared_state->start, "start");
             return std::bind(&worker::abort, this);
         }
@@ -92,7 +79,7 @@ typename block_mock<BlockResult, BlockReason>::block_type block_mock<BlockResult
 template<typename BlockResult, typename BlockReason>
 template<typename... Args>
 void block_mock<BlockResult, BlockReason>::set_result(Args &&... args) const {
-    this->shared_state->take_reply().set_result(std::forward<Args>(args)...);
+    this->shared_state->reply.set_result(std::forward<Args>(args)...);
 }
 
 template<typename BlockResult, typename BlockReason>
@@ -109,7 +96,7 @@ void block_mock<BlockResult, BlockReason>::enqueue_set_result(Args &&... args) c
 
 template<typename BlockResult, typename BlockReason>
 void block_mock<BlockResult, BlockReason>::set_aborted() const {
-    this->shared_state->take_reply().set_aborted();
+    this->shared_state->reply.set_aborted();
 }
 
 template<typename BlockResult, typename BlockReason>
@@ -124,7 +111,7 @@ void block_mock<BlockResult, BlockReason>::enqueue_set_aborted() const {
 
 template<typename BlockResult, typename BlockReason>
 bool block_mock<BlockResult, BlockReason>::is_aborted() const {
-    return this->shared_state->get_reply().is_aborted();
+    return this->shared_state->reply.is_aborted();
 }
 
 template<typename BlockResult, typename BlockReason>
@@ -140,7 +127,7 @@ void block_mock<BlockResult, BlockReason>::expect_abort(action_type action) cons
 template<typename BlockResult, typename BlockReason>
 template<typename Func>
 void block_mock<BlockResult, BlockReason>::enqueue(Func && func) const {
-    this->shared_state->get_reply().get_island().enqueue(std::forward<Func>(func));
+    this->shared_state->reply.get_island().enqueue(std::forward<Func>(func));
 }
 
 #endif // TESTS_HELPERS_BLOCK_MOCK_H

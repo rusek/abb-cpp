@@ -79,8 +79,8 @@ public:
     }
 
     template<typename Func, typename Reply>
-    void setup(Func & func, Reply & reply) {
-        this->val.init(func(reply));
+    void setup(Func & func, Reply && reply) {
+        this->val.init(func(std::move(reply)));
         this->initialized = true;
     }
 
@@ -98,15 +98,15 @@ template<>
 class abort_notifier<void> {
 public:
     template<typename Func, typename Reply>
-    void setup(Func & func, Reply & reply) {
-        func(reply);
+    void setup(Func & func, Reply && reply) {
+        func(std::move(reply));
     }
 
     void abort() {}
 };
 
 template<typename Result, typename Reason, typename Func>
-class impl_brick : public brick<Result, Reason>, protected task, protected reply<Result, Reason> {
+class impl_brick : public brick<Result, Reason>, protected task, protected abb::internal::reply<Result, Reason> {
 public:
     typedef Result result;
     typedef Reason reason;
@@ -132,7 +132,7 @@ public:
         ABB_ASSERT(!this->succ, "Already got succ");
         this->succ = &succ;
         this->cur_status = status::running;
-        this->notifier.setup(this->func, *static_cast<reply<Result, Reason>*>(this));
+        this->notifier.setup(this->func, reply<Result, Reason>(*static_cast<abb::internal::reply<Result, Reason>*>(this)));
     }
 
     void adopt(successor & succ) {
@@ -165,7 +165,7 @@ protected:
     virtual void set_aborted();
 
     Func func;
-    abort_notifier<typename std::result_of<Func(reply<Result, Reason>&)>::type> notifier;
+    abort_notifier<typename std::result_of<Func(reply<Result, Reason>)>::type> notifier;
     value_to_bank_t<result, reason> value;
     status cur_status;
     successor * succ;

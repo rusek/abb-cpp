@@ -3,7 +3,7 @@
 abb::void_block test_void_success() {
     EXPECT_HITS(3);
     HIT(0);
-    abb::void_block block = abb::impl<abb::void_block>([](abb::reply<void> & reply) {
+    abb::void_block block = abb::impl<abb::void_block>([](abb::reply<void> reply) {
         HIT(2);
         reply.set_result();
     });
@@ -13,7 +13,7 @@ abb::void_block test_void_success() {
 
 abb::void_block test_int_success() {
     EXPECT_HITS(3);
-    return abb::impl<abb::block<int>>([](abb::reply<int> & reply) {
+    return abb::impl<abb::block<int>>([](abb::reply<int> reply) {
         HIT(0);
         reply.set_result(5);
         HIT(1);
@@ -26,7 +26,7 @@ abb::void_block test_int_success() {
 abb::void_block test_ref_success() {
     static int var = 0;
     EXPECT_HITS(1);
-    return abb::impl<abb::block<int&>>([](abb::reply<int&> & reply) {
+    return abb::impl<abb::block<int&>>([](abb::reply<int&> reply) {
         reply.set_result(var);
     }).pipe([](int & value) {
         REQUIRE_EQUAL(&value, &var);
@@ -37,7 +37,7 @@ abb::void_block test_ref_success() {
 abb::void_block test_void_error() {
     typedef abb::block<abb::und_t, void> block_type;
 
-    return abb::impl<block_type>([](abb::get_reply_t<block_type> & reply) {
+    return abb::impl<block_type>([](abb::get_reply_t<block_type> reply) {
         reply.set_reason();
     }).pipe(abb::und, IgnoreReason<block_type>());
 }
@@ -46,7 +46,7 @@ abb::void_block test_void_error() {
 abb::void_block test_int_error() {
     typedef abb::block<abb::und_t, int> block_type;
     EXPECT_HITS(3);
-    return abb::impl<block_type>([](abb::get_reply_t<block_type> & reply) {
+    return abb::impl<block_type>([](abb::get_reply_t<block_type> reply) {
         HIT(0);
         reply.set_reason(5);
         HIT(1);
@@ -59,7 +59,7 @@ abb::void_block test_int_error() {
 abb::void_block test_ref_error() {
     static int var = 0;
     EXPECT_HITS(1);
-    return abb::impl<abb::block<abb::und_t, int&>>([](abb::reply<abb::und_t, int&> & reply) {
+    return abb::impl<abb::block<abb::und_t, int&>>([](abb::reply<abb::und_t, int&> reply) {
         reply.set_reason(var);
     }).pipe(abb::und, [](int & value) {
         REQUIRE_EQUAL(&value, &var);
@@ -71,7 +71,7 @@ template<bool SuccessV>
 abb::void_block test_mixed() {
     typedef abb::block<int, bool> block_type;
     EXPECT_HITS(2);
-    return abb::impl<block_type>([](abb::get_reply_t<block_type> & reply) {
+    return abb::impl<block_type>([](abb::get_reply_t<block_type> reply) {
         HIT(0);
         if (SuccessV) {
             reply.set_result(10);
@@ -107,33 +107,33 @@ void test_set_on_abort(abb::island & island) {
     EXPECT_HITS(ToSet == to_set::aborted ? 2 : 3);
 
     struct worker {
-        std::function<void()> operator()(reply_type & reply) {
+        std::function<void()> operator()(reply_type reply) {
             HIT(0);
             REQUIRE_EQUAL(reply.is_aborted(), false);
-            this->reply = &reply;
+            this->reply = std::move(reply);
             return std::bind(&worker::abort, this);
         }
 
         void abort() {
             HIT(1);
-            REQUIRE_EQUAL(this->reply->is_aborted(), true);
+            REQUIRE_EQUAL(this->reply.is_aborted(), true);
             std::function<void()> setter;
             if (ToSet == to_set::result) {
-                setter = std::bind(&reply_type::set_result, this->reply, 10);
+                setter = std::bind(&reply_type::set_result, &this->reply, 10);
             } else if (ToSet == to_set::reason) {
-                setter = std::bind(&reply_type::set_reason, this->reply, true);
+                setter = std::bind(&reply_type::set_reason, &this->reply, true);
             } else {
-                setter = std::bind(&reply_type::set_aborted, this->reply);
+                setter = std::bind(&reply_type::set_aborted, &this->reply);
             }
 
             if (When == when::now) {
                 setter();
             } else {
-                this->reply->get_island().enqueue(setter);
+                this->reply.get_island().enqueue(setter);
             }
         }
 
-        reply_type * reply;
+        reply_type reply;
     };
 
     abb::void_block block = abb::impl<block_type>(worker()).pipe([](int value) {
@@ -165,20 +165,20 @@ void test_movable_abort_notification(abb::island & island) {
     };
 
     struct worker {
-        movable_function operator()(abb::und_reply & reply) {
+        movable_function operator()(abb::und_reply reply) {
             HIT(0);
             REQUIRE_EQUAL(reply.is_aborted(), false);
-            this->reply = &reply;
+            this->reply = std::move(reply);
             return movable_function(std::bind(&worker::abort, this));
         }
 
         void abort() {
             HIT(1);
-            REQUIRE_EQUAL(this->reply->is_aborted(), true);
-            this->reply->set_aborted();
+            REQUIRE_EQUAL(this->reply.is_aborted(), true);
+            this->reply.set_aborted();
         }
 
-        abb::und_reply * reply;
+        abb::und_reply reply;
     };
 
     abb::void_block block = abb::impl<abb::und_block>(worker());
