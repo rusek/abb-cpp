@@ -2,6 +2,7 @@
 #define ABB_LL_BRICK_CONT_H
 
 #include <abb/ll/brick_ptr.h>
+#include <abb/utils/integer_sequence.h>
 
 #include <abb/value.h>
 
@@ -23,6 +24,17 @@ struct cont_return<void(Args...), Cont> {
 template<typename Value, typename Cont>
 using cont_return_t = typename cont_return<Value, Cont>::type;
 
+template<typename Value>
+struct value_index_sequence;
+
+template<typename... Args>
+struct value_index_sequence<void(Args...)> {
+    typedef utils::index_sequence_for<Args...> type;
+};
+
+template<typename Value>
+using value_index_sequence_t = typename value_index_sequence<Value>::type;
+
 } // namespace internal
 
 template<typename Result, typename Cont>
@@ -35,13 +47,13 @@ public:
     success_brick_cont(Arg && arg): cont(std::forward<Arg>(arg)) {}
 
     out_brick_ptr_type operator()(in_brick_ptr_type in_brick) && {
-        return std::move(*this).call(in_brick.get_result(), get_store_getters_t<Result>());
+        return std::move(*this).call(in_brick.get_result(), internal::value_index_sequence_t<Result>());
     }
 
 private:
-    template<typename... Getters>
-    out_brick_ptr_type call(store<Result> & store, store_getters<Getters...> ) && {
-        return std::move(*this).cont(Getters()(std::move(store))...);
+    template<std::size_t... Indices>
+    out_brick_ptr_type call(store<Result> & store, utils::index_sequence<Indices...>) && {
+        return std::move(*this).cont(std::move(store).template get<Indices>()...);
     }
 
     Cont cont;
@@ -70,13 +82,13 @@ public:
     error_brick_cont(Arg && arg): cont(std::forward<Arg>(arg)) {}
 
     out_brick_ptr_type operator()(in_brick_ptr_type in_brick) && {
-        return std::move(*this).call(in_brick.get_reason(), get_store_getters_t<Reason>());
+        return std::move(*this).call(in_brick.get_reason(), internal::value_index_sequence_t<Reason>());
     }
 
 private:
-    template<typename... Getters>
-    out_brick_ptr_type call(store<Reason> & store, store_getters<Getters...> ) && {
-        return std::move(this->cont)(Getters()(std::move(store))...);
+    template<std::size_t... Indices>
+    out_brick_ptr_type call(store<Reason> & store, utils::index_sequence<Indices...>) && {
+        return std::move(this->cont)(std::move(store).template get<Indices>()...);
     }
 
     Cont cont;

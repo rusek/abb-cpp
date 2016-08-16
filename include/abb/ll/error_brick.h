@@ -15,7 +15,7 @@ class error_brick : public brick<und_t, Reason> {
 public:
     template<typename... Args>
     explicit error_brick(Args &&... args):
-        value(std::forward<Args>(args)...) {}
+        value(box_arg, std::forward<Args>(args)...) {}
 
     status get_status() const {
         return status::error;

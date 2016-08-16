@@ -15,7 +15,7 @@ class success_brick : public brick<Result, und_t> {
 public:
     template<typename... Args>
     explicit success_brick(Args &&... args):
-        value(std::forward<Args>(args)...) {}
+        value(box_arg, std::forward<Args>(args)...) {}
 
     status get_status() const {
         return status::success;

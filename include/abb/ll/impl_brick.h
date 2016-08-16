@@ -212,7 +212,7 @@ public:
 protected:
     virtual void set_result(Args... args) {
         ABB_ASSERT(this->cur_status == status::running, "Already got value");
-        this->value.result.init(std::forward<Args>(args)...);
+        this->value.result.init(box_arg, std::forward<Args>(args)...);
         this->cur_status = status::success;
         this->succ->get_island().enqueue(static_cast<task&>(*this));
     }
@@ -232,7 +232,7 @@ public:
 protected:
     virtual void set_reason(Args... args) {
         ABB_ASSERT(this->cur_status == status::running, "Already got value");
-        this->value.reason.init(std::forward<Args>(args)...);
+        this->value.reason.init(box_arg, std::forward<Args>(args)...);
         this->cur_status = status::error;
         this->succ->get_island().enqueue(static_cast<task&>(*this));
     }

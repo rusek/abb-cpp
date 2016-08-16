@@ -10,7 +10,8 @@ class abort_point_brick : public brick<void(), und_t>, private task {
 public:
     abort_point_brick():
         cur_status(status::startable),
-        succ(nullptr) {}
+        succ(nullptr),
+        result(box_arg) {}
 
     void start(successor & succ) {
         this->succ = &succ;

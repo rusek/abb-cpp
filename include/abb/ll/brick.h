@@ -1,7 +1,7 @@
 #ifndef ABB_LL_BRICK_H
 #define ABB_LL_BRICK_H
 
-#include <abb/ll/store.h>
+#include <abb/ll/box.h>
 
 #include <abb/island.h>
 #include <abb/value.h>
@@ -23,7 +23,23 @@ public:
 template<typename FriendBrick>
 class brick_funcs;
 
+template<typename Value>
+struct get_store;
+
+template<typename... Args>
+struct get_store<void(Args...)> {
+    typedef boxes<Args...> type;
+};
+
+template<>
+struct get_store<und_t> {
+    typedef und_t type;
+};
+
 } // namespace internal
+
+template<typename Value>
+using store = typename internal::get_store<Value>::type;
 
 class successor {
 public:

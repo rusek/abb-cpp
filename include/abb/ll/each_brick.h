@@ -1,10 +1,8 @@
 #ifndef ABB_LL_EACH_BRICK_H
 #define ABB_LL_EACH_BRICK_H
 
-#include <abb/inplace.h>
 #include <abb/ll/brick.h>
 #include <abb/ll/brick_ptr.h>
-#include <abb/ll/store.h>
 #include <abb/ll/success_brick.h>
 #include <abb/utils/noncopyable.h>
 #include <abb/utils/cord.h>
@@ -75,21 +73,21 @@ private:
 template<typename Generator, typename Func>
 class map_generator {
 private:
-    Generator wrapped;
-    Func func;
+    box<Generator> wrapped;
+    box<Func> func;
 
 public:
-    template<typename... GeneratorItems, typename... FuncItems>
-    map_generator(inplace_tuple<GeneratorItems...> wrapped_args, inplace_tuple<FuncItems...> func_args):
-        wrapped(GeneratorItems::get(wrapped_args)...),
-        func(FuncItems::get(func_args)...) {}
+    template<typename GeneratorArg, typename FuncArg>
+    map_generator(GeneratorArg && wrapped, FuncArg && func):
+        wrapped(box_arg, std::forward<GeneratorArg>(wrapped)),
+        func(box_arg, std::forward<FuncArg>(func)) {}
 
     explicit operator bool() const {
-        return bool(this->wrapped);
+        return bool(*this->wrapped);
     }
 
-    auto operator()() -> decltype(this->func(this->wrapped())) {
-        return this->func(this->wrapped());
+    auto operator()() -> decltype((*this->func)((*this->wrapped)())) {
+        return (*this->func)((*this->wrapped)());
     }
 };
 
@@ -147,21 +145,21 @@ private:
     typedef internal::each_child<each_brick<Generator>> each_child_type;
     typedef brick_ptr<result, reason> brick_ptr_type;
 public:
-    template<typename... Items>
-    each_brick(inplace_tuple<Items...> args, std::size_t limit):
-        generator(Items::get(args)...),
+    template<typename GeneratorArg>
+    each_brick(GeneratorArg && arg, std::size_t limit):
+        generator(box_arg, std::forward<GeneratorArg>(arg)),
         limit(limit),
         succ(nullptr) {}
 
     void start(successor & succ) {
         this->succ = &succ;
-        if (!this->generator) {
+        if (!*this->generator) {
             this->out_brick = make_brick<success_brick<void()>>();
             return;
         }
 
-        for (std::size_t limit = this->limit; this->generator && limit; --limit) {
-            this->children.insert(new each_child_type(this->generator(), this));
+        for (std::size_t limit = this->limit; *this->generator && limit; --limit) {
+            this->children.insert(new each_child_type((*this->generator)(), this));
         }
 
         for (each_child_type * child : utils::firewalk(this->children)) {
@@ -194,7 +192,7 @@ public:
 private:
     status update_child(each_child_type * child);
 
-    Generator generator;
+    box<Generator> generator;
     std::size_t limit;
     utils::cord_list<each_child_type> children;
     successor * succ;
@@ -207,8 +205,8 @@ template<typename Generator>
 status each_brick<Generator>::update_child(each_child_type * child) {
     for (;;) {
         status in_status = child->in_brick.try_start(*child);
-        if (in_status == status::success && this->generator) { // TODO stop if out_brick is set
-            child->in_brick = this->generator();
+        if (in_status == status::success && *this->generator) { // TODO stop if out_brick is set
+            child->in_brick = (*this->generator)();
         } else {
             brick_ptr_type in_brick = std::move(child->in_brick);
             child->cord_detach();

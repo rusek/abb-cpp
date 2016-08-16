@@ -2,6 +2,7 @@
 #define ABB_VALUE_H
 
 #include <type_traits>
+#include <tuple>
 
 namespace abb {
 
@@ -9,11 +10,50 @@ class und_t {};
 
 class pass_t {};
 
+const und_t und;
+
+const pass_t pass;
+
+template<typename Value>
+struct is_und : std::is_same<Value, und_t> {};
+
+template<typename Value>
+struct is_pass : std::is_same<Value, pass_t> {};
+
+template<typename Value>
+struct is_special : std::integral_constant<bool, is_und<Value>::value || is_pass<Value>::value> {};
+
+template<typename T>
+class inplace_args;
+
+template<typename Ret, typename... Args>
+class inplace_args<Ret(Args...)> : private std::tuple<Args...> {
+public:
+    using std::tuple<Args...>::tuple;
+
+    template<std::size_t Index>
+    typename std::tuple_element<Index, std::tuple<Args...>>::type const& get() const {
+        return std::get<Index>(*this);
+    }
+};
+
+template<typename Ret = pass_t, typename... Args>
+inplace_args<Ret(Args &&...)> inplace(Args &&... args) {
+    return inplace_args<Ret(Args &&...)>(std::forward<Args>(args)...);
+}
+
 namespace internal {
 
 template<typename Arg>
 struct normalize_arg {
     typedef Arg type;
+};
+
+template<typename Ret, typename... Args>
+struct normalize_arg<inplace_args<Ret(Args...)>> {
+    static_assert(!is_special<Ret>::value, "Expected inplace_args to contain valid object type");
+
+    typedef Ret type;
 };
 
 template<typename Arg>
@@ -48,19 +88,6 @@ struct normalize_value<void> {
 };
 
 } // namespace internal
-
-const und_t und;
-
-const pass_t pass;
-
-template<typename Value>
-struct is_und : std::is_same<Value, und_t> {};
-
-template<typename Value>
-struct is_pass : std::is_same<Value, pass_t> {};
-
-template<typename Value>
-struct is_special : std::integral_constant<bool, is_und<Value>::value || is_pass<Value>::value> {};
 
 template<typename Arg>
 using get_result_t = typename Arg::result;
