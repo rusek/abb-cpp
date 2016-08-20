@@ -86,7 +86,7 @@ template<typename BlockResult, typename BlockReason>
 template<typename... Args>
 void block_mock<BlockResult, BlockReason>::enqueue_set_result(Args &&... args) const {
     this->enqueue(
-        std::bind(
+        abb::partial(
             &block_mock<BlockResult, BlockReason>::set_result<Args...>,
             *this,
             std::forward<Args>(args)...
@@ -102,7 +102,7 @@ void block_mock<BlockResult, BlockReason>::set_aborted() const {
 template<typename BlockResult, typename BlockReason>
 void block_mock<BlockResult, BlockReason>::enqueue_set_aborted() const {
     this->enqueue(
-        std::bind(
+        abb::partial(
             &block_mock<BlockResult, BlockReason>::set_aborted,
             *this
         )

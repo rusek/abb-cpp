@@ -11,5 +11,6 @@
 #include <abb/any.h>
 #include <abb/chain.h>
 #include <abb/each.h>
+#include <abb/partial.h>
 
 #endif // ABB_H

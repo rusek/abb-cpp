@@ -6,7 +6,6 @@
 
 #include <abb/task.h>
 
-#include <functional>
 #include <deque>
 #include <mutex>
 #include <condition_variable>
@@ -87,12 +86,12 @@ public:
     virtual void run();
 
 private:
-    std::function<void()> func;
+    Func func;
 };
 
 template<typename Func>
 void functor_task<Func>::run() {
-    this->func();
+    std::move(this->func)();
     delete this;
 }
 
@@ -103,7 +102,7 @@ template<
     typename std::enable_if<std::is_same<typename std::result_of<Func()>::type, void>::value>::type* = nullptr
 >
 void enqueue(island & target, Func && func) {
-    task * to_enqueue = new internal::functor_task<typename std::decay<Func>::type>(func);
+    task * to_enqueue = new internal::functor_task<typename std::decay<Func>::type>(std::forward<Func>(func));
     target.enqueue(*to_enqueue);
 }
 
@@ -112,7 +111,7 @@ template<
     typename std::enable_if<std::is_same<typename std::result_of<Func()>::type, void>::value>::type* = nullptr
 >
 void enqueue_external(island & target, Func && func) {
-    task * to_enqueue = new internal::functor_task<typename std::decay<Func>::type>(func);
+    task * to_enqueue = new internal::functor_task<typename std::decay<Func>::type>(std::forward<Func>(func));
     target.enqueue_external(*to_enqueue);
 }
 

@@ -3,6 +3,7 @@
 
 #include <abb/ll/brick_ptr.h>
 #include <abb/utils/integer_sequence.h>
+#include <abb/utils/invoke.h>
 
 #include <abb/value.h>
 
@@ -53,7 +54,7 @@ public:
 private:
     template<std::size_t... Indices>
     out_brick_ptr_type call(store<Result> & store, utils::index_sequence<Indices...>) && {
-        return std::move(*this).cont(std::move(store).template get<Indices>()...);
+        return utils::invoke(std::move(this->cont), std::move(store).template get<Indices>()...);
     }
 
     Cont cont;
@@ -88,7 +89,7 @@ public:
 private:
     template<std::size_t... Indices>
     out_brick_ptr_type call(store<Reason> & store, utils::index_sequence<Indices...>) && {
-        return std::move(this->cont)(std::move(store).template get<Indices>()...);
+        return utils::invoke(std::move(this->cont), std::move(store).template get<Indices>()...);
     }
 
     Cont cont;

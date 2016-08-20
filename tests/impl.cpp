@@ -88,7 +88,7 @@ abb::void_block test_mixed() {
 }
 
 void enqueue_abort(abb::island & island, abb::handle handle) {
-    island.enqueue(std::bind(&abb::handle::abort, std::make_shared<abb::handle>(std::move(handle))));
+    island.enqueue(abb::partial(&abb::handle::abort, std::move(handle)));
 }
 
 enum class to_set {
