@@ -120,6 +120,7 @@ void brick_runner<Result, Reason, External>::drop_handle() {
 class handle {
 public:
     explicit handle(internal::handleable * handleable): handleable(handleable) {}
+    handle(): handleable(nullptr) {}
     handle(handle const&) = delete;
     handle(handle && other):
         handleable(other.handleable)
@@ -134,7 +135,14 @@ public:
     }
 
     handle & operator=(handle const&) = delete;
-    handle & operator=(handle &&) = delete;
+    handle & operator=(handle && other) {
+        if (this->handleable != nullptr) {
+            this->handleable->drop_handle();
+        }
+        this->handleable = other.handleable;
+        other.handleable = nullptr;
+        return *this;
+    }
 
     void abort() {
         this->handleable->abort();

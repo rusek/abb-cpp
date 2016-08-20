@@ -1,4 +1,5 @@
 #include "helpers/base.h"
+#include "helpers/block_mock.h"
 
 abb::void_block test_void_success() {
     EXPECT_HITS(3);
@@ -186,6 +187,71 @@ void test_movable_abort_notification(abb::island & island) {
     enqueue_abort(island, island.enqueue(std::move(block)));
 }
 
+abb::void_block test_no_enqueue_on_immediate_success() {
+    EXPECT_HITS(3);
+
+    return abb::impl<abb::void_block>([](abb::void_reply reply) {
+        HIT(0);
+        reply.get_island().enqueue([]() {
+            HIT(2);
+        });
+        reply.set_result();
+    }).pipe([]() {
+        HIT(1);
+    });
+}
+
+abb::void_block test_no_enqueue_on_immediate_error() {
+    EXPECT_HITS(3);
+
+    return abb::impl<abb::block<abb::und_t, void>>([](abb::reply<abb::und_t, void> reply) {
+        HIT(0);
+        reply.get_island().enqueue([]() {
+            HIT(2);
+        });
+        reply.set_reason();
+    }).pipe(abb::pass, []() {
+        HIT(1);
+    });
+}
+
+void test_no_enqueue_on_immediate_abort(abb::island & island) {
+    static abb::handle handle;
+
+    EXPECT_HITS(3);
+
+    block_mock<void> partner;
+    partner.expect_start();
+    partner.expect_abort([partner]() {
+        HIT(1);
+        partner.set_aborted();
+    });
+
+    struct abort_worker {
+        std::function<void()> operator()(abb::void_reply reply) {
+            this->reply = std::move(reply);
+            handle.abort();
+            return std::bind(&abort_worker::abort, this);
+        }
+
+        void abort() {
+            HIT(0);
+            this->reply.get_island().enqueue([]() {
+                HIT(2);
+            });
+            this->reply.set_aborted();
+        }
+
+        abb::void_reply reply;
+    };
+
+    EXPECT_HITS(3);
+
+    abb::void_block impl_block = abb::impl<abb::void_block>(abort_worker());
+
+    handle = island.enqueue(abb::any(std::move(impl_block), partner.get()));
+}
+
 int main() {
     RUN_FUNCTION(test_void_success);
     RUN_FUNCTION(test_int_success);
@@ -202,5 +268,8 @@ int main() {
     RUN_FUNCTION(test_set_on_abort<to_set::aborted, when::now>);
     RUN_FUNCTION(test_set_on_abort<to_set::aborted, when::later>);
     RUN_FUNCTION(test_movable_abort_notification);
+    RUN_FUNCTION(test_no_enqueue_on_immediate_success);
+    RUN_FUNCTION(test_no_enqueue_on_immediate_error);
+    RUN_FUNCTION(test_no_enqueue_on_immediate_abort);
     return 0;
 }
