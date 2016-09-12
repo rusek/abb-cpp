@@ -44,16 +44,21 @@ public:
     ):
         in_brick(std::move(in_brick)),
         cont(std::forward<SuccessArg>(success_arg), std::forward<ErrorArg>(error_arg)),
+        target(nullptr),
+        aborted(false),
         succ(nullptr)
     {
     }
 
     void abort() {
+        this->aborted = true; // TODO test
         this->in_brick.abort();
         this->update(); // TODO test
     }
 
-    void start(successor & succ) {
+    void start(island & target, bool aborted, successor & succ) {
+        this->target = &target;
+        this->aborted = aborted;
         this->succ = &succ;
         this->update();
     }
@@ -65,7 +70,7 @@ public:
     status get_status() const {
         if (this->out_brick) {
             return status::next;
-        } else if (this->succ) {
+        } else if (this->target) {
             return status::running;
         } else {
             return status::startable;
@@ -78,14 +83,14 @@ public:
 
 private:
     virtual void on_update();
-    virtual island & get_island() const;
-    virtual bool is_aborted() const;
 
     void update();
 
     in_brick_ptr_type in_brick;
     brick_cont_type cont;
     out_brick_ptr_type out_brick;
+    island * target;
+    bool aborted;
     successor * succ;
 };
 
@@ -99,20 +104,10 @@ void pipe_brick<Result, Reason, SuccessCont, ErrorCont>::on_update() {
 
 template<typename Result, typename Reason, typename SuccessCont, typename ErrorCont>
 void pipe_brick<Result, Reason, SuccessCont, ErrorCont>::update() {
-    status in_status = this->in_brick.try_start(*this);
+    status in_status = this->in_brick.update(*this->target, this->aborted, *this);
     if (in_status != status::running) {
         this->out_brick = std::move(this->cont)(std::move(this->in_brick));
     }
-}
-
-template<typename Result, typename Reason, typename SuccessCont, typename ErrorCont>
-island & pipe_brick<Result, Reason, SuccessCont, ErrorCont>::get_island() const {
-    return this->succ->get_island();
-}
-
-template<typename Result, typename Reason, typename SuccessCont, typename ErrorCont>
-bool pipe_brick<Result, Reason, SuccessCont, ErrorCont>::is_aborted() const {
-    return this->succ->is_aborted();
 }
 
 } // namespace ll

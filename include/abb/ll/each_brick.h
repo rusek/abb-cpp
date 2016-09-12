@@ -105,8 +105,6 @@ public:
 
 private:
     virtual void on_update();
-    virtual island & get_island() const;
-    virtual bool is_aborted() const;
 
     brick_ptr_type in_brick;
     EachBrick * parent;
@@ -121,16 +119,6 @@ void each_child<EachBrick>::on_update() {
     if (parent_status != status::running) {
         parent->succ->on_update();
     }
-}
-
-template<typename EachBrick>
-island & each_child<EachBrick>::get_island() const {
-    return this->parent->succ->get_island();
-}
-
-template<typename EachBrick>
-bool each_child<EachBrick>::is_aborted() const {
-    return this->parent->out_brick || this->parent->succ->is_aborted();
 }
 
 } // namespace internal
@@ -149,9 +137,13 @@ public:
     each_brick(GeneratorArg && arg, std::size_t limit):
         generator(box_arg, std::forward<GeneratorArg>(arg)),
         limit(limit),
+        target(nullptr),
+        aborted(false),
         succ(nullptr) {}
 
-    void start(successor & succ) {
+    void start(island & target, bool aborted, successor & succ) {
+        this->target = &target;
+        this->aborted = aborted;
         this->succ = &succ;
         if (!*this->generator) {
             this->out_brick = make_brick<success_brick<void()>>();
@@ -195,6 +187,8 @@ private:
     box<Generator> generator;
     std::size_t limit;
     utils::cord_list<each_child_type> children;
+    island * target;
+    bool aborted;
     successor * succ;
     brick_ptr_type out_brick;
 
@@ -204,7 +198,7 @@ private:
 template<typename Generator>
 status each_brick<Generator>::update_child(each_child_type * child) {
     for (;;) {
-        status in_status = child->in_brick.try_start(*child);
+        status in_status = child->in_brick.update(*this->target, this->aborted, *child);
         if (in_status == status::success && *this->generator) { // TODO stop if out_brick is set
             child->in_brick = (*this->generator)();
         } else {

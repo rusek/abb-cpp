@@ -112,7 +112,12 @@ public:
     typedef Reason reason;
 
     template<typename Arg>
-    impl_brick(Arg && arg): func(std::forward<Arg>(arg)), cur_status(status::startable), succ(nullptr) {}
+    impl_brick(Arg && arg):
+        func(std::forward<Arg>(arg)),
+        cur_status(status::startable),
+        target(nullptr),
+        aborted(false),
+        succ(nullptr) {}
 
     ~impl_brick() {
         if (this->cur_status == status::success) {
@@ -123,6 +128,7 @@ public:
     }
 
     void abort() {
+        this->aborted = true;
         if (this->cur_status == status::running) {
             this->cur_status = status::startable;
             this->notifier.abort();
@@ -134,8 +140,9 @@ public:
         }
     }
 
-    void start(successor & succ) {
-        ABB_ASSERT(!this->succ, "Already got succ");
+    void start(island & target, bool aborted, successor & succ) {
+        this->target = &target;
+        this->aborted = aborted;
         this->succ = &succ;
         this->notifier.setup(this->func, reply<Result, Reason>(*static_cast<abb::internal::reply<Result, Reason>*>(this)));
         if (this->cur_status == status::startable) {
@@ -178,6 +185,8 @@ protected:
     abort_notifier<typename std::result_of<Func(reply<Result, Reason>)>::type> notifier;
     value_to_bank_t<result, reason> value;
     status cur_status;
+    island * target;
+    bool aborted;
     successor * succ;
 };
 
@@ -194,16 +203,16 @@ island & impl_brick<Result, Reason, Func>::get_island() const {
         this->cur_status == status::running || this->cur_status == status::startable,
         "Cannot call get_island after setting a value"
     );
-    return this->succ->get_island();
+    return *this->target;
 }
 
 template<typename Result, typename Reason, typename Func>
 bool impl_brick<Result, Reason, Func>::is_aborted() const {
     ABB_ASSERT(
         this->cur_status == status::running || this->cur_status == status::startable,
-        "Cannot call get_island after setting a value"
+        "Cannot call is_aborted after setting a value"
     );
-    return this->succ->is_aborted();
+    return this->aborted;
 }
 
 template<typename Result, typename Reason, typename Func>
@@ -212,11 +221,11 @@ void impl_brick<Result, Reason, Func>::set_aborted() {
         this->cur_status == status::running || this->cur_status == status::startable,
         "Already got value"
     );
-    ABB_ASSERT(this->succ->is_aborted(), "Abort was not requested");
+    ABB_ASSERT(this->aborted, "Abort was not requested");
     status prev_status = this->cur_status;
     this->cur_status = status::abort;
     if (prev_status == status::running) {
-        this->succ->get_island().enqueue(static_cast<task&>(*this));
+        this->target->enqueue(static_cast<task&>(*this));
     }
 }
 
@@ -241,7 +250,7 @@ protected:
         status prev_status = this->cur_status;
         this->cur_status = status::success;
         if (prev_status == status::running) {
-            this->succ->get_island().enqueue(static_cast<task&>(*this));
+            this->target->enqueue(static_cast<task&>(*this));
         }
     }
 };
@@ -267,7 +276,7 @@ protected:
         status prev_status = this->cur_status;
         this->cur_status = status::error;
         if (prev_status == status::running) {
-            this->succ->get_island().enqueue(static_cast<task&>(*this));
+            this->target->enqueue(static_cast<task&>(*this));
         }
     }
 };

@@ -20,7 +20,7 @@ typedef void raw_value;
 struct brick_vtable {
     // Base methods
     void (*abort)(raw_brick * brick);
-    void (*start)(raw_brick * brick, successor & succ);
+    void (*start)(raw_brick * brick, island & target, bool aborted, successor & succ);
     status (*get_status)(raw_brick const* brick);
     raw_brick * (*get_next)(raw_brick * brick);
     void (*destroy)(raw_brick * brick);
@@ -57,7 +57,7 @@ struct brick_funcs {
     }
 
     static void abort(raw_brick * brick);
-    static void start(raw_brick * brick, successor & succ);
+    static void start(raw_brick * brick, island & island, bool aborted, successor & succ);
     static status get_status(raw_brick const* brick);
     static raw_brick * get_next(raw_brick * brick);
     static void destroy(raw_brick * brick);
@@ -96,8 +96,8 @@ void brick_funcs<Brick>::abort(raw_brick * brick) {
 }
 
 template<typename Brick>
-void brick_funcs<Brick>::start(raw_brick * brick, successor & succ) {
-    brick_funcs::from_raw(brick)->start(succ);
+void brick_funcs<Brick>::start(raw_brick * brick, island & target, bool aborted, successor & succ) {
+    brick_funcs::from_raw(brick)->start(target, aborted, succ);
 }
 
 template<typename Brick>
@@ -205,8 +205,8 @@ public:
         this->ptr->vtable->abort(this->ptr);
     }
 
-    void start(successor & succ) {
-        this->ptr->vtable->start(this->ptr, succ);
+    void start(island & target, bool aborted, successor & succ) {
+        this->ptr->vtable->start(this->ptr, target, aborted, succ);
     }
 
     status get_status() const {
@@ -225,7 +225,7 @@ public:
         return *internal::value_funcs<Reason>::from_raw(this->ptr->vtable->get_reason(this->ptr));
     }
 
-    status try_start(successor & succ);
+    status update(island & target, bool aborted, successor & succ);
 
 private:
     explicit brick_ptr(internal::raw_brick * ptr):
@@ -253,12 +253,12 @@ private:
 };
 
 template<typename Result, typename Reason>
-status brick_ptr<Result, Reason>::try_start(successor & succ) {
+status brick_ptr<Result, Reason>::update(island & target, bool aborted, successor & succ) {
     for (;;) {
         status cur_status = this->get_status();
         switch (cur_status) {
         case status::startable:
-            this->start(succ);
+            this->start(target, aborted, succ);
             break;
         case status::next:
             (*this) = this->get_next();

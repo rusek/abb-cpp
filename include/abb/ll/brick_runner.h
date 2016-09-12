@@ -49,8 +49,6 @@ public:
 
 private:
     virtual void on_update();
-    virtual island & get_island() const;
-    virtual bool is_aborted() const;
     virtual void run();
 
     island & target;
@@ -60,23 +58,13 @@ private:
 
 template<typename Result, typename Reason, bool External>
 void brick_runner<Result, Reason, External>::on_update() {
-    if (this->brick.try_start(*this) != status::running) {
+    if (this->brick.update(this->target, (this->flags & runner_abort_accepted) != 0, *this) != status::running) {
         this->target.decref_external();
         this->flags &= ~runner_ref_work;
         if ((this->flags & runner_ref) == 0) {
             delete this;
         }
     }
-}
-
-template<typename Result, typename Reason, bool External>
-island & brick_runner<Result, Reason, External>::get_island() const {
-    return this->target;
-}
-
-template<typename Result, typename Reason, bool External>
-bool brick_runner<Result, Reason, External>::is_aborted() const {
-    return (this->flags & runner_abort_accepted) != 0;
 }
 
 template<typename Result, typename Reason, bool External>

@@ -45,8 +45,6 @@ class successor {
 public:
     virtual ~successor() {}
     virtual void on_update() = 0;
-    virtual island & get_island() const = 0;
-    virtual bool is_aborted() const = 0;
 };
 
 enum class status {
@@ -69,7 +67,7 @@ struct brick : private internal::raw_brick {
     template<typename FriendBrick>
     friend class internal::brick_funcs;
 
-    void start(successor &) {
+    void start(island &, bool, successor &) {
         ABB_FIASCO("Erased method called");
     }
 

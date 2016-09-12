@@ -10,20 +10,24 @@ class abort_point_brick : public brick<void(), und_t>, private task {
 public:
     abort_point_brick():
         cur_status(status::startable),
+        aborted(false),
         succ(nullptr),
         result(box_arg) {}
 
-    void start(successor & succ) {
+    void start(island & target, bool aborted, successor & succ) { // TODO optimize aborted == true case
         this->succ = &succ;
         this->cur_status = status::running;
-        this->succ->get_island().enqueue_external(static_cast<task&>(*this));
+        this->aborted = aborted;
+        target.enqueue_external(static_cast<task&>(*this));
     }
 
     void adopt(successor & succ) {
         this->succ = &succ;
     }
 
-    void abort() {}
+    void abort() {
+        this->aborted = true;
+    }
 
     status get_status() const {
         return this->cur_status;
@@ -37,6 +41,7 @@ private:
     virtual void run();
 
     status cur_status;
+    bool aborted;
     successor * succ;
     store<void()> result;
 };

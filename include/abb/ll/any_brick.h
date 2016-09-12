@@ -27,8 +27,6 @@ public:
 
 private:
     virtual void on_update();
-    virtual island & get_island() const;
-    virtual bool is_aborted() const;
 
     any_brick_type * parent;
     brick_ptr_type in_brick;
@@ -45,24 +43,14 @@ void any_child<Result, Reason>::on_update() {
     }
 }
 
-template<typename Result, typename Reason>
-island & any_child<Result, Reason>::get_island() const {
-    return this->parent->succ->get_island();
-}
-
-template<typename Result, typename Reason>
-bool any_child<Result, Reason>::is_aborted() const {
-    return this->parent->out_brick || this->parent->succ->is_aborted();
-}
-
 } // namespace internal
 
 class hold_brick : public brick<und_t, und_t> {
 public:
     hold_brick(): cur_status(status::startable) {}
 
-    void start(successor & succ) {
-        this->cur_status = succ.is_aborted() ? status::abort : status::running;
+    void start(island &, bool aborted, successor &) {
+        this->cur_status = aborted ? status::abort : status::running;
     }
 
     void abort() {
@@ -87,6 +75,8 @@ private:
 public:
     template<typename Iterator>
     any_brick(Iterator begin, Iterator end):
+        target(nullptr),
+        aborted(false),
         succ(nullptr)
     {
         for (; begin != end; ++begin) {
@@ -99,6 +89,8 @@ public:
     }
 
     any_brick():
+        target(nullptr),
+        aborted(false),
         succ(nullptr) {}
 
     ~any_brick() {
@@ -107,7 +99,9 @@ public:
         }
     }
 
-    void start(successor & succ) {
+    void start(island & target, bool aborted, successor & succ) {
+        this->target = &target;
+        this->aborted = aborted;
         this->succ = &succ;
         for (any_child_type * child : utils::firewalk(this->children)) {
             child->parent = this;
@@ -120,7 +114,8 @@ public:
     }
 
     void abort() {
-        if (!this->out_brick) { // TODO add test
+        if (!this->aborted) { // TODO add test
+            this->aborted = true;
             for (any_child_type * child : utils::firewalk(this->children)) {
                 this->abort_child(child);
             }
@@ -147,6 +142,8 @@ private:
 
     utils::cord_list<any_child_type> children;
     brick_ptr_type out_brick;
+    island * target;
+    bool aborted;
     successor * succ;
 
     friend any_child_type;
@@ -154,16 +151,16 @@ private:
 
 template<typename Result, typename Reason>
 void any_brick<Result, Reason>::update_child(any_child_type * child) {
-    if (child->in_brick.try_start(*child) != status::running) {
-        bool had_out_brick = this->out_brick;
-        if (!had_out_brick) {
+    if (child->in_brick.update(*this->target, this->aborted, *child) != status::running) {
+        if (!this->out_brick) {
             this->out_brick = std::move(child->in_brick);
         }
 
         child->cord_detach();
         delete child;
 
-        if (!had_out_brick && !this->succ->is_aborted()) {
+        if (!this->aborted) {
+            this->aborted = true;
             for (any_child_type * child : utils::firewalk(this->children)) {
                 this->abort_child(child);
             }

@@ -13,12 +13,12 @@ public:
     template<typename... Args>
     maker_brick(Args &&... args): func(std::forward<Args>(args)...), succ(nullptr) {}
 
-    void start(successor & succ) {
+    void start(island & target, bool aborted, successor & succ) {
+        this->target = &target;
+        this->aborted = aborted;
         this->succ = &succ;
         this->wrapped_brick = std::move(this->func)();
-        if (this->wrapped_brick.try_start(*this) != status::running) {
-            this->succ = nullptr;
-        }
+        this->update();
     }
 
     void adopt(successor & succ) {
@@ -26,15 +26,14 @@ public:
     }
 
     void abort() {
+        this->aborted = true;
         this->wrapped_brick.abort();
-        if (this->wrapped_brick.try_start(*this) != status::running) { // TODO test
-            this->succ = nullptr;
-        }
+        this->update(); // TODO test
     }
 
     status get_status() const {
         if (this->wrapped_brick) {
-            if (!this->succ) {
+            if (!this->target) {
                 return status::next;
             } else {
                 return status::running;
@@ -50,31 +49,29 @@ public:
 
 private:
     virtual void on_update();
-    virtual island & get_island() const;
-    virtual bool is_aborted() const;
+
+    void update();
 
     Func func;
+    island * target;
+    bool aborted;
     successor * succ;
     brick_ptr<Result, Reason> wrapped_brick;
 };
 
 template<typename Result, typename Reason, typename Func>
 void maker_brick<Result, Reason, Func>::on_update() {
-    if (this->wrapped_brick.try_start(*this) != status::running) {
-        successor & succ = *this->succ;
-        this->succ = nullptr;
-        succ.on_update();
+    this->update();
+    if (!this->target) {
+        this->succ->on_update();
     }
 }
 
 template<typename Result, typename Reason, typename Func>
-island & maker_brick<Result, Reason, Func>::get_island() const {
-    return this->succ->get_island();
-}
-
-template<typename Result, typename Reason, typename Func>
-bool maker_brick<Result, Reason, Func>::is_aborted() const {
-    return this->succ->is_aborted();
+void maker_brick<Result, Reason, Func>::update() {
+    if (this->wrapped_brick.update(*this->target, this->aborted, *this) != status::running) {
+        this->target = nullptr;
+    }
 }
 
 } // namespace ll
